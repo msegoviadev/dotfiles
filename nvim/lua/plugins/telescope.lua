@@ -57,14 +57,29 @@ return {
         }):find()
       end
 
+      -- Function to get visual selection and search with live_grep
+      local function grep_visual_selection()
+        -- Yank the visual selection to the v register
+        vim.cmd('noautocmd normal! "vy')
+        
+        -- Get the yanked text and remove newlines (join without spaces)
+        local search_term = vim.fn.getreg('v'):gsub('\n', '')
+        
+        -- Call live_grep with the selected text as default
+        builtin.live_grep({ default_text = search_term })
+      end
+
       -- set a vim motion to <Space> + f + p to search for projects
       vim.keymap.set('n', '<leader>fp', find_projects, { desc = '[F]ind [P]rojects' })
       -- set a vim motion to <Space> + f + f to search for files by their names
       vim.keymap.set('n', '<leader>ff', builtin.find_files, { desc = "[F]ind [F]iles" })
       -- set a vim motion to <Space> + f + g to search for files based on the text inside of them
       vim.keymap.set('n', '<leader>fg', builtin.live_grep, { desc = "[F]ind by [G]rep" })
+      vim.keymap.set('v', '<leader>fg', grep_visual_selection, { desc = "[F]ind by [G]rep (selection)" })
       -- set a vim motion to <Space> + f + b to search Open Buffers
       vim.keymap.set('n', '<leader>fb', builtin.buffers, { desc = '[F]ind Existing [B]uffers' })
+      -- set a vim motion to <Space> + f + d to search for git diff files
+      vim.keymap.set('n', '<leader>fd', builtin.git_status, { desc = '[F]ind [D]iff' })
       end
   },
   {
