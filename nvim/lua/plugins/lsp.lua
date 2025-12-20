@@ -10,7 +10,7 @@ return {
     dependencies = { "williamboman/mason.nvim" },
     config = function()
       require("mason-lspconfig").setup({
-        ensure_installed = { "pyright", "ts_ls" },
+        ensure_installed = { "lua_ls", "pyright", "ts_ls" },
       })
     end,
   },
@@ -43,6 +43,42 @@ return {
         cmd = { "typescript-language-server", "--stdio" },
         filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
         root_markers = { "package.json", "tsconfig.json", "jsconfig.json" },
+      }
+
+      vim.lsp.config.lua_ls = {
+        cmd = { "lua-language-server" },
+        filetypes = { "lua" },
+        root_markers = { ".git", ".luarc.json", ".luarc.jsonc", "stylua.toml" },
+        settings = {
+          Lua = {
+            runtime = {
+              -- Tell the language server which version of Lua you're using (LuaJIT for Neovim)
+              version = "LuaJIT",
+            },
+            diagnostics = {
+              -- Recognize 'vim' as a global variable
+              globals = { "vim" },
+            },
+            workspace = {
+              -- Make the server aware of Neovim runtime files
+              library = {
+                vim.env.VIMRUNTIME,
+              },
+              -- Don't prompt about third party libraries
+              checkThirdParty = false,
+            },
+            telemetry = {
+              enable = false,
+            },
+            hint = {
+              enable = true,
+              semicolon = "Disable",
+            },
+            codeLens = {
+              enable = true,
+            },
+          },
+        },
       }
 
       -- LSP keymaps
