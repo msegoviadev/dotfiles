@@ -5,6 +5,8 @@ return {
     "nvim-lua/plenary.nvim",
     "antoinemadec/FixCursorHold.nvim",
     "nvim-treesitter/nvim-treesitter",
+    -- Debug Adapter Protocol
+    "mfussenegger/nvim-dap",
     -- TypeScript/JavaScript adapters
     "nvim-neotest/neotest-jest",
     {
