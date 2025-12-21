@@ -1,0 +1,22 @@
+# Theme and appearance
+theme = Catppuccin Mocha
+font-family = JetBrains Mono
+font-size = 14
+
+# Background image
+background-image = ~/.config/ghostty/background/hornet.jpg
+background-image-fit = cover
+background-image-opacity = 0.3
+
+# Transparency (light transparency: 0.9-0.95 is subtle)
+background-opacity = 0.85
+background-blur = true
+
+# Minimal padding (2-4px is super small)
+window-padding-x = 5
+window-padding-y = 5
+
+# Minimal window setup (removes title bar decorations)
+window-decoration = false
+macos-titlebar-style = hidden
+
