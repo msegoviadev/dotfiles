@@ -20,3 +20,10 @@ window-padding-y = 5
 window-decoration = false
 macos-titlebar-style = hidden
 
+# Window size (comfortable for coding with splits)
+window-width = 171
+window-height = 50
+
+# Save window state so manual resizes persist
+window-save-state = always
+
