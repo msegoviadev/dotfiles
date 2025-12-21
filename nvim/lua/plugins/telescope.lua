@@ -41,13 +41,30 @@ return {
               -- Get the full path from selection
               local project_path = selection[1]
               
+              -- Check if nvim-tree is currently open
+              local nvim_tree_was_open = false
+              local ok, nvim_tree_api = pcall(require, 'nvim-tree.api')
+              if ok then
+                nvim_tree_was_open = nvim_tree_api.tree.is_visible()
+              end
+              
+              -- Close all buffers with confirmation for unsaved changes
+              local close_success, close_error = pcall(vim.cmd, 'confirm %bdelete')
+              if not close_success then
+                -- User cancelled or there was an error
+                print("❌ Project switch cancelled")
+                return
+              end
+              
               -- Change to the selected directory
               vim.cmd('cd ' .. vim.fn.fnameescape(project_path))
               
               -- Update nvim-tree to show the new project root
-              local ok, nvim_tree_api = pcall(require, 'nvim-tree.api')
-              if ok then
-                nvim_tree_api.tree.change_root(project_path)
+              if ok and nvim_tree_was_open then
+                vim.schedule(function()
+                  nvim_tree_api.tree.open()
+                  nvim_tree_api.tree.change_root(project_path)
+                end)
               end
               
               print("📁 Switched to: " .. vim.fn.fnamemodify(project_path, ':t'))

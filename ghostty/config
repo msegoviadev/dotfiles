@@ -4,7 +4,7 @@ font-family = JetBrains Mono
 font-size = 14
 
 # Background image
-background-image = ~/.config/ghostty/background/hornet.jpg
+background-image = ~/.config/ghostty/background/hornet-small.jpg
 background-image-fit = cover
 background-image-opacity = 0.3
 
