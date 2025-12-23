@@ -5,17 +5,12 @@ return {
     "nvim-lua/plenary.nvim",
     "antoinemadec/FixCursorHold.nvim",
     "nvim-treesitter/nvim-treesitter",
-    -- Debug Adapter Protocol
     "mfussenegger/nvim-dap",
-    -- TypeScript/JavaScript adapters
     "nvim-neotest/neotest-jest",
     {
       "thenbe/neotest-playwright",
       dependencies = { "nvim-telescope/telescope.nvim" },
     },
-    -- Java adapter and its dependencies
-    "rcasia/neotest-java",
-    "mfussenegger/nvim-jdtls",
   },
   config = function()
     local neotest = require("neotest")
@@ -53,11 +48,6 @@ return {
             -- Only match .test.* files (not .spec.* which are for Playwright)
             return file_path:match("%.test%.[jt]sx?$")
           end,
-        }),
-        -- Java testing with Maven
-        require("neotest-java")({
-          -- Use mvnw wrapper if available, fallback to mvn
-          ignore_wrapper = false,
         }),
       },
       -- Configure icons for test status
