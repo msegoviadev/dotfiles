@@ -86,15 +86,18 @@ return {
         group = vim.api.nvim_create_augroup("UserLspConfig", {}),
         callback = function(ev)
           local opts = { buffer = ev.buf, desc = "" }
-          vim.keymap.set("n", "gd", vim.lsp.buf.definition, vim.tbl_extend("force", opts, { desc = "[G]oto [D]efinition" }))
+          vim.keymap.set("n", "gd", vim.lsp.buf.definition,
+            vim.tbl_extend("force", opts, { desc = "[G]oto [D]efinition" }))
           vim.keymap.set("n", "gr", function()
             require("telescope.builtin").lsp_references({
               jump_type = "tab",
               show_line = false,
             })
           end, vim.tbl_extend("force", opts, { desc = "[G]oto [R]eferences" }))
+          vim.keymap.set("n", "<leader>l", vim.lsp.buf.format, vim.tbl_extend("force", opts, { desc = "[L]SP Format" }))
         end,
       })
     end,
   },
 }
+
