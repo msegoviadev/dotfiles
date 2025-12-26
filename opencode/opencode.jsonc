@@ -7,9 +7,7 @@
   "tui": {
     "scroll_speed": 3
   },
-  "plugin": [
-    "opencode-skills"
-  ],
+  "plugin": [],
   "permission": {
     "edit": "allow",
     "webfetch": "ask",
