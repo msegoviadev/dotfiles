@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Lock files
+bun.lock
+package-lock.json
+
+# Skills
+skills/*
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

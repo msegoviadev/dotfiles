@@ -1,5 +1,10 @@
 return {
   {
+    "b0o/SchemaStore.nvim",
+    lazy = true,
+    version = false,
+  },
+  {
     "williamboman/mason.nvim",
     config = function()
       require("mason").setup()
@@ -10,7 +15,7 @@ return {
     dependencies = { "williamboman/mason.nvim" },
     config = function()
       require("mason-lspconfig").setup({
-        ensure_installed = { "lua_ls", "pyright", "ts_ls" },
+        ensure_installed = { "lua_ls", "pyright", "ts_ls", "jsonls" },
       })
     end,
   },
@@ -79,6 +84,24 @@ return {
             },
           },
         },
+      }
+
+      vim.lsp.config.jsonls = {
+        cmd = { "vscode-json-language-server", "--stdio" },
+        filetypes = { "json", "jsonc" },
+        root_markers = { ".git" },
+        settings = {
+          json = {
+            format = {
+              enable = true,
+            },
+            validate = { enable = true },
+          },
+        },
+        on_new_config = function(new_config, root_dir)
+          new_config.settings.json.schemas = new_config.settings.json.schemas or {}
+          vim.list_extend(new_config.settings.json.schemas, require("schemastore").json.schemas())
+        end,
       }
 
       -- LSP keymaps
