@@ -168,18 +168,20 @@ return {
         },
         pickers = {
           live_grep = {
-            theme = "dropdown",
+            layout_strategy = "vertical",
             layout_config = {
-              height = 0.6,
+              height = 0.95,
               width = 0.8,
+              preview_height = 0.6,
             },
           },
 
           grep_string = {
-            theme = "dropdown",
+            layout_strategy = "vertical",
             layout_config = {
-              height = 0.6,
+              height = 0.95,
               width = 0.8,
+              preview_height = 0.6,
             },
           },
 
@@ -237,7 +239,12 @@ return {
           },
 
           git_status = {
-            theme = "dropdown",
+            layout_strategy = "vertical",
+            layout_config = {
+              height = 0.95,
+              width = 0.8,
+              preview_height = 0.6,
+            },
             -- Configure git status icons to use your custom icons
             git_icons = {
               added = icons.git.FileUnstaged,
