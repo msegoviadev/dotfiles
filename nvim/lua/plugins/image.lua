@@ -1,9 +1,9 @@
 return {
   "3rd/image.nvim",
-  build = false, -- prevents building the rock (recommended for magick_cli)
-  event = "VeryLazy", -- load when Neovim is fully started
+  build = false,              -- prevents building the rock (recommended for magick_cli)
+  event = "VeryLazy",         -- load when Neovim is fully started
   opts = {
-    backend = "kitty", -- use Kitty graphics protocol (fallback to "sixel" if this doesn't work)
+    backend = "kitty",        -- use Kitty graphics protocol (fallback to "sixel" if this doesn't work)
     processor = "magick_cli", -- use ImageMagick CLI
     integrations = {
       markdown = {

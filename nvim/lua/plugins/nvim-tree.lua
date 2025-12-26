@@ -2,19 +2,19 @@ return {
   "nvim-tree/nvim-tree.lua",
   config = function()
     vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle [E]xplorer" })
-        
-        vim.keymap.set("n", "<C-h>", ":wincmd h<cr>", { desc = "Move focus to the left window" })
-        local icons = require("config.icons")
+
+    vim.keymap.set("n", "<C-h>", ":wincmd h<cr>", { desc = "Move focus to the left window" })
+    local icons = require("config.icons")
 
     -- Set up custom highlights for git status colors (catppuccin-mocha palette)
-    vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#f9e2af" }) -- Yellow for modified files
-    vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#a6e3a1" }) -- Green for new files
+    vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#f9e2af" })   -- Yellow for modified files
+    vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#a6e3a1" })     -- Green for new files
     vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = "#f38ba8" }) -- Red for deleted files
     vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = "#fab387" }) -- Peach for renamed files
-    vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#94e2d5" }) -- Teal for staged files
-    vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#cba6f7" }) -- Mauve for merge conflicts
+    vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#94e2d5" })  -- Teal for staged files
+    vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#cba6f7" })   -- Mauve for merge conflicts
     vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#6c7086" }) -- Subtext1 for ignored files
-    
+
     -- Make folders match file color exactly (using catppuccin text color)
     vim.api.nvim_set_hl(0, "NvimTreeFolderName", { fg = "#cdd6f4", bg = "NONE" })
     vim.api.nvim_set_hl(0, "NvimTreeOpenedFolderName", { fg = "#cdd6f4", bg = "NONE" })
@@ -33,13 +33,15 @@ return {
       },
       on_attach = function(bufnr)
         local api = require("nvim-tree.api")
-        
+
         -- Default mappings
         api.config.mappings.default_on_attach(bufnr)
-        
+
         -- Custom mappings for vim-like navigation
-        vim.keymap.set("n", "l", api.node.open.edit, { desc = "Open file/directory", buffer = bufnr, noremap = true, silent = true, nowait = true })
-        vim.keymap.set("n", "h", api.node.navigate.parent_close, { desc = "Close directory", buffer = bufnr, noremap = true, silent = true, nowait = true })
+        vim.keymap.set("n", "l", api.node.open.edit,
+          { desc = "Open file/directory", buffer = bufnr, noremap = true, silent = true, nowait = true })
+        vim.keymap.set("n", "h", api.node.navigate.parent_close,
+          { desc = "Close directory", buffer = bufnr, noremap = true, silent = true, nowait = true })
       end,
       renderer = {
         add_trailing = false,
@@ -88,7 +90,7 @@ return {
             },
           },
         },
-        special_files = { },
+        special_files = {},
         symlink_destination = true,
       },
       update_focused_file = {

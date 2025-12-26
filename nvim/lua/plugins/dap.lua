@@ -28,17 +28,17 @@ return {
         layouts = {
           {
             elements = {
-              { id = "scopes", size = 0.30 },
+              { id = "scopes",      size = 0.30 },
               { id = "breakpoints", size = 0.20 },
-              { id = "stacks", size = 0.30 },
-              { id = "watches", size = 0.20 },
+              { id = "stacks",      size = 0.30 },
+              { id = "watches",     size = 0.20 },
             },
             size = 15,
             position = "bottom",
           },
           {
             elements = {
-              { id = "repl", size = 0.5 },
+              { id = "repl",    size = 0.5 },
               { id = "console", size = 0.5 },
             },
             size = 10,
@@ -55,10 +55,10 @@ return {
         },
       })
 
-       -- Automatically open DAP UI (keep open to see test results)
-       dap.listeners.after.event_initialized["dapui_config"] = function()
-         dapui.open()
-       end
+      -- Automatically open DAP UI (keep open to see test results)
+      dap.listeners.after.event_initialized["dapui_config"] = function()
+        dapui.open()
+      end
     end,
   },
   {

@@ -16,7 +16,7 @@ return {
         },
 
         jdk = {
-          auto_install = false,  -- Use system Java 21
+          auto_install = false, -- Use system Java
         },
 
         lombok = {
@@ -55,18 +55,18 @@ return {
             }
           }
         }
-       })
+      })
 
-       -- Enable JDTLS
-       vim.lsp.enable('jdtls')
-     end,
+      -- Enable JDTLS
+      vim.lsp.enable('jdtls')
+    end,
   },
-   {
-     "neovim/nvim-lspconfig",
-     opts = {
-       servers = {
-         jdtls = false,  -- Handled by nvim-java
-       },
-     },
-   },
+  {
+    "neovim/nvim-lspconfig",
+    opts = {
+      servers = {
+        jdtls = false,  -- Handled by nvim-java
+      },
+    },
+  },
 }
