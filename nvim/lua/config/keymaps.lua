@@ -82,7 +82,7 @@ end, { desc = "[D]ebug: Run [L]ast" })
 
 -- DAP UI keymaps
 vim.keymap.set("n", "<leader>dui", function()
-  require("dapui").toggle()
+  require("dapui").toggle({ reset = true })
 end, { desc = "[D]ebug: Toggle [UI]" })
 
 vim.keymap.set("n", "<leader>de", function()

@@ -28,26 +28,26 @@ return {
         layouts = {
           {
             elements = {
-              { id = "scopes",      size = 0.30 },
-              { id = "breakpoints", size = 0.20 },
-              { id = "stacks",      size = 0.30 },
-              { id = "watches",     size = 0.20 },
+              { id = "scopes",      size = 0.33 },
+              { id = "breakpoints", size = 0.17 },
+              { id = "stacks",      size = 0.25 },
+              { id = "watches",     size = 0.25 },
             },
-            size = 15,
-            position = "bottom",
+            size = 0.25,  -- 25% of screen width
+            position = "right",
           },
           {
             elements = {
               { id = "repl",    size = 0.5 },
               { id = "console", size = 0.5 },
             },
-            size = 10,
+            size = 0.25,  -- 25% of screen height
             position = "bottom",
           },
         },
         floating = {
-          max_height = nil,
-          max_width = nil,
+          max_height = 0.9,
+          max_width = 0.5,
           border = "single",
           mappings = {
             close = { "q", "<Esc>" },
@@ -59,6 +59,26 @@ return {
       dap.listeners.after.event_initialized["dapui_config"] = function()
         dapui.open()
       end
+
+      -- Reset dap-ui layout when nvim-tree toggles to prevent expansion
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "NvimTree",
+        callback = function()
+          vim.schedule(function()
+            -- Check if dapui is open
+            for _, win in ipairs(vim.api.nvim_list_wins()) do
+              local buf = vim.api.nvim_win_get_buf(win)
+              local ft = vim.api.nvim_get_option_value("filetype", { buf = buf })
+              if ft and ft:match("^dapui_") then
+                -- Reset dapui to restore original proportions
+                dapui.close()
+                dapui.open({ reset = true })
+                break
+              end
+            end
+          end)
+        end,
+      })
     end,
   },
   {
