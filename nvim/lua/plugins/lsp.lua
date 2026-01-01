@@ -15,7 +15,7 @@ return {
     dependencies = { "williamboman/mason.nvim" },
     config = function()
       require("mason-lspconfig").setup({
-        ensure_installed = { "lua_ls", "pyright", "ts_ls", "jsonls" },
+        ensure_installed = { "lua_ls", "pyright", "ts_ls", "jsonls", "terraformls" },
       })
     end,
   },
@@ -103,6 +103,19 @@ return {
           vim.list_extend(new_config.settings.json.schemas, require("schemastore").json.schemas())
         end,
       }
+
+      vim.lsp.config.terraformls = {
+        cmd = { "terraform-ls", "serve" },
+        filetypes = { "terraform", "terraform-vars" },
+        root_markers = { ".terraform", ".git" },
+      }
+
+      -- Enable LSP servers
+      vim.lsp.enable('pyright')
+      vim.lsp.enable('ts_ls')
+      vim.lsp.enable('lua_ls')
+      vim.lsp.enable('jsonls')
+      vim.lsp.enable('terraformls')
 
       -- LSP keymaps
       vim.api.nvim_create_autocmd("LspAttach", {
