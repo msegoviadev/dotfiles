@@ -219,22 +219,42 @@ return {
           },
 
           lsp_references = {
-            theme = "dropdown",
+            layout_strategy = "vertical",
+            layout_config = {
+              height = 0.95,
+              width = 0.8,
+              preview_height = 0.6,
+            },
             initial_mode = "normal",
           },
 
           lsp_definitions = {
-            theme = "dropdown",
+            layout_strategy = "vertical",
+            layout_config = {
+              height = 0.95,
+              width = 0.8,
+              preview_height = 0.6,
+            },
             initial_mode = "normal",
           },
 
           lsp_declarations = {
-            theme = "dropdown",
+            layout_strategy = "vertical",
+            layout_config = {
+              height = 0.95,
+              width = 0.8,
+              preview_height = 0.6,
+            },
             initial_mode = "normal",
           },
 
           lsp_implementations = {
-            theme = "dropdown",
+            layout_strategy = "vertical",
+            layout_config = {
+              height = 0.95,
+              width = 0.8,
+              preview_height = 0.6,
+            },
             initial_mode = "normal",
           },
 
