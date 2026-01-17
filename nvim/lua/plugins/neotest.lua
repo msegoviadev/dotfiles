@@ -1,5 +1,18 @@
 return {
   "nvim-neotest/neotest",
+  keys = {
+    { "<leader>tr", desc = "[T]est [R]un Nearest" },
+    { "<leader>tf", desc = "[T]est Run [F]ile" },
+    { "<leader>tO", desc = "[T]est [O]utput" },
+    { "<leader>ta", desc = "[T]est Run [A]ll" },
+    { "<leader>ts", desc = "[T]est [S]ummary" },
+    { "<leader>to", desc = "[T]est [O]utput Panel" },
+    { "<leader>tx", desc = "[T]est Stop" },
+    { "<leader>td", desc = "[T]est [D]ebug Nearest" },
+    { "]t", desc = "Next Failed Test" },
+    { "[t", desc = "Previous Failed Test" },
+    { "<leader>ti", desc = "[T]est [I]nfo" },
+  },
   dependencies = {
     "nvim-neotest/nvim-nio",
     "nvim-lua/plenary.nvim",

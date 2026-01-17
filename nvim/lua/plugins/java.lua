@@ -1,6 +1,7 @@
 return {
   {
     'nvim-java/nvim-java',
+    ft = { 'java' },
     dependencies = {
       'MunifTanjim/nui.nvim',
       'mfussenegger/nvim-dap',
