@@ -1,7 +1,12 @@
-## Style Guidelines
+- **Language:** English only - all code, comments, docs, examples, commits, configs, errors, tests
 
+## Style Guidelines
 - Prefer self-documenting code over comments
 - Don't use em dashes (—). Use commas, parentheses, or separate sentences instead.
+
+## Git/Commit Guidelines
+- Never add "Claude" or any AI assistant as a co-author in git commits
+- Keep commit messages succinct, providing a summary of functionality or changes rather than bullet-pointing each specific detail
 
 ## Tooling for shell interactions
 
