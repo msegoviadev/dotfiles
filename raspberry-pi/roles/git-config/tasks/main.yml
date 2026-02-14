@@ -1,0 +1,42 @@
+---
+# ============================================
+# Git Config Role
+# ============================================
+# Purpose: Configure Git global settings
+# Runs with: become: no (user-level configuration)
+# ============================================
+
+- name: Set Git user name
+  git_config:
+    name: user.name
+    scope: global
+    value: "{{ git_user_name }}"
+
+- name: Set Git user email
+  git_config:
+    name: user.email
+    scope: global
+    value: "{{ git_user_email }}"
+
+- name: Set Git default editor
+  git_config:
+    name: core.editor
+    scope: global
+    value: "{{ git_editor }}"
+
+- name: Set Git default branch name
+  git_config:
+    name: init.defaultBranch
+    scope: global
+    value: "{{ git_default_branch }}"
+
+- name: Display Git configuration
+  command: git config --global --list
+  register: git_config_output
+  changed_when: false
+
+- name: Show Git configuration summary
+  debug:
+    msg: |
+      Git configured successfully!
+      {{ git_config_output.stdout }}

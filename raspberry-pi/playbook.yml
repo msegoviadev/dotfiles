@@ -1,0 +1,56 @@
+---
+- name: Provision Raspberry Pi - Phases 2 & 3 (Shell, Dev Environment & OpenCode Server)
+  hosts: raspberry_pi
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Test connection to Raspberry Pi
+      ping:
+      tags: always
+
+    - name: Display target host information
+      debug:
+        msg: "Provisioning {{ ansible_hostname }} ({{ ansible_host }})"
+      tags: always
+
+  roles:
+    - role: system-prep
+      become: yes
+      tags: ['system', 'update', 'prep']
+
+    - role: zsh
+      become: no
+      tags: ['zsh', 'shell']
+
+    - role: cli-tools
+      become: yes
+      tags: ['tools', 'cli']
+
+    - role: git-config
+      become: no
+      tags: ['git', 'config']
+
+    - role: tailscale
+      become: no
+      tags: ['tailscale', 'vpn']
+
+    - role: opencode-server
+      become: no
+      tags: ['opencode', 'server']
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg: |
+          ============================================
+          🎉 Raspberry Pi Provisioning Complete!
+          ============================================
+          
+          Next steps:
+          1. Log out and log back in (or run: exec zsh)
+          2. Verify your prompt shows:  marcos@neo:~$
+          3. Test tools: which fd rg bat jq yq ast-grep
+          4. Check git config: git config --global --list
+          
+          Your shell is now fully configured!
+      tags: always

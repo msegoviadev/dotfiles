@@ -1,0 +1,50 @@
+---
+# ============================================
+# System Prep Role
+# ============================================
+# Purpose: Update system, install essentials, set timezone
+# Runs with: become: yes (root privileges)
+# ============================================
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  tags: ['update']
+
+- name: Upgrade all packages
+  apt:
+    upgrade: dist
+    autoremove: yes
+    autoclean: yes
+  tags: ['update']
+  register: apt_upgrade_result
+
+- name: Display upgrade summary
+  debug:
+    msg: "{{ apt_upgrade_result.stdout_lines | default(['No packages upgraded']) }}"
+  when: apt_upgrade_result is defined
+  tags: ['update']
+
+- name: Install essential packages
+  apt:
+    name:
+      - build-essential
+      - python3
+      - python3-pip
+    state: present
+
+- name: Set timezone to {{ timezone }}
+  timezone:
+    name: "{{ timezone }}"
+
+- name: Ensure systemd-timesyncd is running
+  systemd:
+    name: systemd-timesyncd
+    state: started
+    enabled: yes
+
+- name: Run autoremove to clean up unused packages
+  apt:
+    autoremove: yes
+    autoclean: yes

@@ -1,0 +1,371 @@
+---
+# ============================================
+# OpenCode Server Role
+# ============================================
+# Purpose: Install and configure OpenCode server on Raspberry Pi
+# Runs with: mixed (some tasks need become: yes)
+# ============================================
+
+# ============================================
+# Task 1: Install Node.js Runtime via nvm
+# ============================================
+
+- name: Check if nvm is already installed
+  stat:
+    path: "{{ home_dir }}/.nvm/nvm.sh"
+  register: nvm_stat
+
+- name: Install nvm
+  shell: |
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+  args:
+    creates: "{{ home_dir }}/.nvm/nvm.sh"
+  environment:
+    HOME: "{{ home_dir }}"
+  when: not nvm_stat.stat.exists
+
+- name: Install Node.js LTS via nvm
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && nvm install --lts && nvm use --lts
+  args:
+    executable: /bin/bash
+    creates: "{{ home_dir }}/.nvm/versions/node"
+  environment:
+    HOME: "{{ home_dir }}"
+
+- name: Get Node.js version
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && node --version
+  args:
+    executable: /bin/bash
+  register: node_version
+  changed_when: false
+
+- name: Get npm version
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && npm --version
+  args:
+    executable: /bin/bash
+  register: npm_version
+  changed_when: false
+
+- name: Add nvm to .zshrc (if not already present)
+  blockinfile:
+    path: "{{ home_dir }}/.zshrc"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - NVM"
+    block: |
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    state: present
+
+- name: Display Node.js and npm versions
+  debug:
+    msg: "Node.js {{ node_version.stdout }}, npm {{ npm_version.stdout }}"
+
+# ============================================
+# Task 2: Install OpenCode
+# ============================================
+
+- name: Check if OpenCode is already installed
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && which opencode
+  args:
+    executable: /bin/bash
+  register: opencode_check
+  changed_when: false
+  failed_when: false
+
+- name: Install OpenCode via npm
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && npm install -g opencode-ai
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when: opencode_check.rc != 0
+  register: opencode_install
+
+- name: Get OpenCode installation path
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && which opencode
+  args:
+    executable: /bin/bash
+  register: opencode_path
+  changed_when: false
+
+- name: Verify OpenCode installation
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && opencode --version
+  args:
+    executable: /bin/bash
+  register: opencode_version
+  changed_when: false
+
+- name: Display OpenCode version and path
+  debug:
+    msg: "OpenCode {{ opencode_version.stdout }} installed at {{ opencode_path.stdout }}"
+
+# ============================================
+# Task 2B: Update OpenCode
+# ============================================
+
+- name: Get current installed OpenCode version
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && opencode --version 2>/dev/null || echo "not-installed"
+  args:
+    executable: /bin/bash
+  register: current_opencode_version
+  changed_when: false
+  failed_when: false
+  tags: ['opencode', 'opencode-update']
+
+- name: Get latest available OpenCode version from npm
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && npm view opencode-ai version
+  args:
+    executable: /bin/bash
+  register: latest_opencode_version
+  changed_when: false
+  failed_when: false
+  tags: ['opencode', 'opencode-update']
+
+- name: Display version comparison
+  debug:
+    msg: |
+      Current version: {{ current_opencode_version.stdout }}
+      Latest version: {{ latest_opencode_version.stdout }}
+      Update needed: {{ current_opencode_version.stdout != latest_opencode_version.stdout and current_opencode_version.stdout != "not-installed" }}
+  tags: ['opencode', 'opencode-update']
+
+- name: Remember current version number for display purposes
+  set_fact:
+    opencode_version_before_update: "{{ current_opencode_version.stdout }}"
+  when: 
+    - current_opencode_version.stdout != "not-installed"
+    - current_opencode_version.stdout != latest_opencode_version.stdout
+  tags: ['opencode', 'opencode-update']
+
+- name: Update OpenCode via npm
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && npm update -g opencode-ai
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when: 
+    - current_opencode_version.stdout != "not-installed"
+    - current_opencode_version.stdout != latest_opencode_version.stdout
+  register: opencode_update_result
+  notify:
+    - restart opencode
+    - restart tailscale serve
+  tags: ['opencode', 'opencode-update']
+
+- name: Verify OpenCode was updated successfully
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && opencode --version
+  args:
+    executable: /bin/bash
+  register: updated_opencode_version
+  changed_when: false
+  when: opencode_update_result is changed
+  tags: ['opencode', 'opencode-update']
+
+- name: Display update result
+  debug:
+    msg: |
+      {% if opencode_update_result is changed %}
+      ============================================
+      ✅ OpenCode Updated Successfully!
+      ============================================
+      
+      Previous version: {{ opencode_version_before_update }}
+      New version: {{ updated_opencode_version.stdout }}
+      
+      Services will restart automatically.
+      
+      Your data is safe:
+      - Messages, sessions, projects preserved
+      - API credentials unchanged
+      - All user data in ~/.local/share/opencode/
+      
+      To rollback if needed:
+      ssh neo ". ~/.nvm/nvm.sh && npm install -g opencode-ai@{{ opencode_version_before_update }}"
+      sudo systemctl restart opencode tailscale-serve
+      
+      ============================================
+      {% elif current_opencode_version.stdout == latest_opencode_version.stdout %}
+      ============================================
+      ℹ️  OpenCode Already Up to Date
+      ============================================
+      
+      Current version: {{ current_opencode_version.stdout }}
+      Latest version: {{ latest_opencode_version.stdout }}
+      
+      No update needed.
+      ============================================
+      {% else %}
+      ℹ️  No update performed
+      {% endif %}
+  tags: ['opencode', 'opencode-update']
+
+# ============================================
+# Task 3: Setup Directories
+# ============================================
+
+- name: Create OpenCode config directory
+  file:
+    path: "{{ home_dir }}/.config/opencode"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Create OpenCode data directory
+  file:
+    path: "{{ home_dir }}/.local/share/opencode"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+# ============================================
+# Task 4: Deploy Systemd Service
+# ============================================
+
+- name: Deploy OpenCode systemd service file
+  template:
+    src: opencode.service.j2
+    dest: /etc/systemd/system/opencode.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  register: service_file
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+  become: yes
+  when: service_file.changed
+
+- name: Enable OpenCode service
+  systemd:
+    name: opencode
+    enabled: yes
+  become: yes
+
+- name: Start OpenCode service
+  systemd:
+    name: opencode
+    state: started
+  become: yes
+  register: service_start
+
+- name: Check OpenCode service status
+  systemd:
+    name: opencode
+  register: opencode_service_status
+  become: yes
+
+- name: Display service status
+  debug:
+    msg: "OpenCode service is {{ opencode_service_status.status.ActiveState }}"
+
+# ============================================
+# Task 5: Verification
+# ============================================
+
+- name: Wait for OpenCode server to be ready
+  uri:
+    url: "http://localhost:{{ opencode_port }}/global/health"
+    method: GET
+    status_code: 200
+  register: health_check
+  until: health_check.status == 200
+  retries: 10
+  delay: 3
+  ignore_errors: yes
+
+- name: Display OpenCode server connection information
+  debug:
+    msg: |
+      ============================================
+      🎉 OpenCode Server is Running!
+      ============================================
+      
+      Server Details:
+      - Version: {{ opencode_version.stdout }}
+      - Hostname: {{ opencode_hostname }}
+      - Port: {{ opencode_port }}
+      
+      Access URLs:
+      - From Pi: http://localhost:{{ opencode_port }}
+      - From Mac: http://192.168.1.71:{{ opencode_port }}
+      - Health: http://192.168.1.71:{{ opencode_port }}/global/health
+      - API Docs: http://192.168.1.71:{{ opencode_port }}/doc
+      
+      Next Steps:
+      1. SSH into the Pi: ssh neo
+      2. Run OpenCode TUI: opencode
+      3. Configure API keys: /connect
+      4. Choose your provider and add API key
+      
+      Service Management:
+      - Status: sudo systemctl status opencode
+      - Restart: sudo systemctl restart opencode
+      - Stop: sudo systemctl stop opencode
+      - Logs: sudo journalctl -u opencode -f
+      
+      Test from Mac:
+      curl http://192.168.1.71:{{ opencode_port }}/global/health
+      
+      ============================================
+
+# ============================================
+# Task 5B: Post-Update Verification
+# ============================================
+
+- name: Wait for OpenCode service to be fully ready (after update)
+  wait_for:
+    host: localhost
+    port: 4096
+    state: started
+    delay: 3
+    timeout: 60
+  when: opencode_update_result is defined and opencode_update_result is changed
+  tags: ['opencode', 'opencode-update', 'verify']
+
+- name: Verify OpenCode health endpoint (after update)
+  uri:
+    url: "http://localhost:4096/global/health"
+    method: GET
+    status_code: 200
+    timeout: 10
+  register: post_update_health_check
+  retries: 5
+  delay: 2
+  until: post_update_health_check.status == 200
+  when: opencode_update_result is defined and opencode_update_result is changed
+  failed_when: false
+  tags: ['opencode', 'opencode-update', 'verify']
+
+- name: Display post-update verification status
+  debug:
+    msg: |
+      {% if opencode_update_result is defined and opencode_update_result is changed %}
+      ============================================
+      ✅ Update Verification Complete
+      ============================================
+      
+      OpenCode {{ updated_opencode_version.stdout }} is running
+      Health check: {{ post_update_health_check.json if post_update_health_check.json is defined else 'pending' }}
+      
+      HTTPS Access:
+      https://neo.lamancha-smoot.ts.net/
+      
+      ============================================
+      {% endif %}
+  when: opencode_update_result is defined
+  tags: ['opencode', 'opencode-update', 'verify']

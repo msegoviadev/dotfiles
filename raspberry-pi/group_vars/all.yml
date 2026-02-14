@@ -1,0 +1,88 @@
+---
+# ============================================
+# User Configuration
+# ============================================
+ansible_user: marcos
+home_dir: /home/marcos
+
+# ============================================
+# System Configuration
+# ============================================
+timezone: Europe/Zurich
+
+# ============================================
+# Git Configuration
+# ============================================
+git_user_name: marcos
+git_user_email: marcos@msegovia.dev
+git_default_branch: main
+git_editor: vi
+
+# ============================================
+# Zsh Configuration
+# ============================================
+zsh_theme: half-life
+
+# Prompt icon (Tux penguin - nf-dev-linux)
+zsh_prompt_icon: ""
+
+# Zsh plugins (all disabled for minimal config)
+zsh_plugins: []
+  # - git
+  # - docker
+  # - docker-compose
+  # - sudo
+  # - command-not-found
+  # - zsh-autosuggestions
+  # - zsh-syntax-highlighting
+  # - fzf
+  # - extract
+  # - systemd
+  # - aliases
+  # - history-substring-search
+
+# History settings
+zsh_histsize: 10000
+zsh_savehist: 10000
+
+# ============================================
+# CLI Tools Configuration
+# ============================================
+
+# Debian packages to install
+debian_packages:
+  - zsh
+  - fd-find
+  - ripgrep
+  - bat
+  - ncdu
+  - tree
+  - jq
+  - fzf
+  - curl
+  - wget
+  - build-essential
+  - git
+
+# Binary versions (for downloads)
+yq_version: latest
+astgrep_version: latest
+
+# ============================================
+# OpenCode Server Configuration
+# ============================================
+opencode_hostname: "0.0.0.0"
+opencode_port: 4096
+opencode_enable_mdns: false
+
+# ============================================
+# Tailscale Configuration
+# ============================================
+tailscale_hostname: neo
+# tailscale_auth_key: ""  # Add your auth key here (will be prompted if not set)
+
+# Tailscale Serve Configuration
+# - HTTPS proxy runs on port 443
+# - Proxies to OpenCode on port 4096
+# - Certificates managed automatically by Tailscale
+# - Service: tailscale-serve.service

@@ -1,0 +1,31 @@
+[Unit]
+Description=OpenCode Server
+Documentation=https://opencode.ai/docs/server/
+After=network.target
+
+[Service]
+Type=simple
+User={{ ansible_user }}
+Group={{ ansible_user }}
+WorkingDirectory={{ home_dir }}
+
+# Environment variables
+Environment="HOME={{ home_dir }}"
+Environment="NVM_DIR={{ home_dir }}/.nvm"
+
+# Start command with nvm sourcing
+ExecStart=/bin/bash -c 'source {{ home_dir }}/.nvm/nvm.sh && opencode serve --hostname {{ opencode_hostname }} --port {{ opencode_port }}'
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+StartLimitInterval=300s
+StartLimitBurst=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=opencode-server
+
+[Install]
+WantedBy=multi-user.target

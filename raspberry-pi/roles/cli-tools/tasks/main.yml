@@ -1,0 +1,156 @@
+---
+# ============================================
+# CLI Tools Role
+# ============================================
+# Purpose: Install modern CLI tools
+# Runs with: become: yes (root privileges)
+# ============================================
+
+- name: Install Debian packages
+  apt:
+    name: "{{ debian_packages }}"
+    state: present
+    update_cache: yes
+
+- name: Create ~/.local/bin directory
+  file:
+    path: "{{ home_dir }}/.local/bin"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+
+- name: Create symlink for fd (fdfind -> fd)
+  file:
+    src: /usr/bin/fdfind
+    dest: "{{ home_dir }}/.local/bin/fd"
+    state: link
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Create symlink for bat (batcat -> bat)
+  file:
+    src: /usr/bin/batcat
+    dest: "{{ home_dir }}/.local/bin/bat"
+    state: link
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+# ============================================
+# Install yq (YAML processor)
+# ============================================
+
+- name: Check if yq is already installed
+  stat:
+    path: /usr/local/bin/yq
+  register: yq_stat
+
+- name: Get latest yq version
+  uri:
+    url: https://api.github.com/repos/mikefarah/yq/releases/latest
+    return_content: yes
+  register: yq_release
+  when: not yq_stat.stat.exists
+
+- name: Download yq binary (ARM64)
+  get_url:
+    url: "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64"
+    dest: /usr/local/bin/yq
+    mode: '0755'
+    owner: root
+    group: root
+  when: not yq_stat.stat.exists
+
+- name: Verify yq installation
+  command: /usr/local/bin/yq --version
+  register: yq_version_check
+  changed_when: false
+  failed_when: false
+
+# ============================================
+# Install ast-grep (Code search tool)
+# ============================================
+
+- name: Check if ast-grep is already installed
+  stat:
+    path: /usr/local/bin/ast-grep
+  register: astgrep_stat
+
+- name: Install ast-grep binary
+  block:
+    - name: Create temporary directory for ast-grep
+      tempfile:
+        state: directory
+        suffix: astgrep
+      register: astgrep_temp
+      when: not astgrep_stat.stat.exists
+
+    - name: Download ast-grep archive (ARM64)
+      get_url:
+        url: "https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-aarch64-unknown-linux-gnu.zip"
+        dest: "{{ astgrep_temp.path }}/ast-grep.zip"
+        mode: '0644'
+      when: not astgrep_stat.stat.exists
+
+    - name: Install unzip if not present
+      apt:
+        name: unzip
+        state: present
+      when: not astgrep_stat.stat.exists
+
+    - name: Extract ast-grep archive
+      unarchive:
+        src: "{{ astgrep_temp.path }}/ast-grep.zip"
+        dest: "{{ astgrep_temp.path }}"
+        remote_src: yes
+      when: not astgrep_stat.stat.exists
+
+    - name: Find ast-grep binary in extracted files
+      find:
+        paths: "{{ astgrep_temp.path }}"
+        patterns: "ast-grep"
+        recurse: yes
+        file_type: file
+      register: astgrep_binary
+      when: not astgrep_stat.stat.exists
+
+    - name: Copy ast-grep to /usr/local/bin
+      copy:
+        src: "{{ astgrep_binary.files[0].path }}"
+        dest: /usr/local/bin/ast-grep
+        mode: '0755'
+        owner: root
+        group: root
+        remote_src: yes
+      when: not astgrep_stat.stat.exists and astgrep_binary.files | length > 0
+
+    - name: Clean up temporary directory
+      file:
+        path: "{{ astgrep_temp.path }}"
+        state: absent
+      when: astgrep_temp.path is defined
+
+  rescue:
+    - name: Display warning if ast-grep installation failed
+      debug:
+        msg: |
+          WARNING: ast-grep installation failed.
+          You can manually install it later if needed.
+          Continuing with the rest of the playbook...
+
+- name: Verify ast-grep installation
+  command: /usr/local/bin/ast-grep --version
+  register: astgrep_version_check
+  changed_when: false
+  failed_when: false
+
+- name: Display CLI tools installation summary
+  debug:
+    msg: |
+      CLI Tools installed successfully!
+      - fd: {{ 'installed' if ansible_facts.packages['fd-find'] is defined else 'not found' }}
+      - ripgrep: {{ 'installed' if ansible_facts.packages['ripgrep'] is defined else 'not found' }}
+      - bat: {{ 'installed' if ansible_facts.packages['bat'] is defined else 'not found' }}
+      - jq: {{ 'installed' if ansible_facts.packages['jq'] is defined else 'not found' }}
+      - yq: {{ yq_version_check.stdout if yq_version_check.rc == 0 else 'installation failed' }}
+      - ast-grep: {{ astgrep_version_check.stdout if astgrep_version_check.rc == 0 else 'installation failed' }}

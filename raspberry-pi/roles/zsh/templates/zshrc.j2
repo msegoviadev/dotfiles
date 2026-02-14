@@ -1,0 +1,64 @@
+# Set TERM to xterm-256color for best compatibility
+# Override xterm-ghostty which doesn't work well over SSH
+export TERM=xterm-256color
+
+# Path to oh-my-zsh installation
+export ZSH="$HOME/.oh-my-zsh"
+
+# Theme
+ZSH_THEME="{{ zsh_theme }}"
+
+# Plugins
+plugins=(
+{% for plugin in zsh_plugins %}
+  {{ plugin }}
+{% endfor %}
+)
+
+# Load Oh My Zsh
+source $ZSH/oh-my-zsh.sh
+
+# ============================================
+# CUSTOM CONFIGURATION
+# ============================================
+
+# Modify half-life prompt to show hostname
+# Original: username in directory
+# Modified: username@hostname in directory
+PROMPT="${purple}%n@%m%{$reset_color%} in ${limegreen}%~%{$reset_color%}\$(virtualenv_prompt_info)\$(ruby_prompt_info)\$vcs_info_msg_0_${orange} λ%{$reset_color%} "
+
+# History configuration
+HISTSIZE={{ zsh_histsize }}
+SAVEHIST={{ zsh_savehist }}
+HISTFILE=~/.zsh_history
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_FIND_NO_DUPS
+setopt HIST_REDUCE_BLANKS
+setopt INC_APPEND_HISTORY
+
+# PATH
+export PATH="$HOME/.local/bin:$PATH"
+
+# FZF
+if command -v fzf &> /dev/null && command -v fd &> /dev/null; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+fi
+
+# Aliases
+alias ll='ls -lah'
+alias la='ls -A'
+alias l='ls -CF'
+
+# Color support
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+    alias ls='ls --color=auto'
+    alias grep='grep --color=auto'
+fi
+
+# Ghostty shell integration
+if [ -n "${GHOSTTY_RESOURCES_DIR}" ]; then
+    builtin source "${GHOSTTY_RESOURCES_DIR}/shell-integration/zsh/ghostty-integration"
+fi

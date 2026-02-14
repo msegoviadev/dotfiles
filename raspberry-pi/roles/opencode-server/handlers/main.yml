@@ -1,0 +1,29 @@
+---
+# ============================================
+# OpenCode Server Handlers
+# ============================================
+# Purpose: Handle service restarts after updates
+# Order: OpenCode first, then Tailscale Serve
+# ============================================
+
+- name: Restart OpenCode service
+  systemd:
+    name: opencode
+    state: restarted
+  become: yes
+  listen: "restart opencode"
+
+- name: Wait for OpenCode to be ready
+  wait_for:
+    host: localhost
+    port: 4096
+    delay: 2
+    timeout: 30
+  listen: "restart opencode"
+
+- name: Restart Tailscale Serve service
+  systemd:
+    name: tailscale-serve
+    state: restarted
+  become: yes
+  listen: "restart tailscale serve"

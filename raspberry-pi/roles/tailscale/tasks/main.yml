@@ -1,0 +1,169 @@
+---
+# ============================================
+# Tailscale Role
+# ============================================
+# Purpose: Install and configure Tailscale VPN on Raspberry Pi
+# Runs with: become: yes for package installation
+# ============================================
+
+# ============================================
+# Task 1: Install Tailscale
+# ============================================
+
+- name: Check if Tailscale is already installed
+  command: which tailscale
+  register: tailscale_check
+  changed_when: false
+  failed_when: false
+
+- name: Download Tailscale install script
+  get_url:
+    url: https://tailscale.com/install.sh
+    dest: /tmp/tailscale-install.sh
+    mode: '0755'
+  when: tailscale_check.rc != 0
+
+- name: Install Tailscale
+  shell: sh /tmp/tailscale-install.sh
+  become: yes
+  when: tailscale_check.rc != 0
+  register: tailscale_install
+
+- name: Remove install script
+  file:
+    path: /tmp/tailscale-install.sh
+    state: absent
+  when: tailscale_check.rc != 0
+
+- name: Get Tailscale version
+  command: tailscale version
+  register: tailscale_version
+  changed_when: false
+
+- name: Display Tailscale version
+  debug:
+    msg: "Tailscale version: {{ tailscale_version.stdout_lines[0] }}"
+
+# ============================================
+# Task 2: Check Authentication Status
+# ============================================
+
+- name: Check if already authenticated to Tailscale
+  command: tailscale status
+  register: tailscale_status
+  changed_when: false
+  failed_when: false
+
+- name: Display authentication status
+  debug:
+    msg: "{{ 'Tailscale is authenticated and connected' if tailscale_status.rc == 0 else 'Tailscale is NOT authenticated - SSH to server and run: sudo tailscale up --hostname=' + tailscale_hostname }}"
+
+# ============================================
+# Task 3: Enable Tailscale service
+# ============================================
+
+- name: Enable and start Tailscale service
+  systemd:
+    name: tailscaled
+    enabled: yes
+    state: started
+  become: yes
+
+- name: Get Tailscale status for display
+  command: tailscale status
+  register: final_status
+  changed_when: false
+  failed_when: false
+
+# ============================================
+# Task 4: Configure Tailscale Serve Systemd Service
+# ============================================
+
+- name: Create Tailscale Serve systemd service
+  template:
+    src: tailscale-serve.service.j2
+    dest: /etc/systemd/system/tailscale-serve.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  register: serve_service
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Reload systemd daemon for Tailscale Serve
+  systemd:
+    daemon_reload: yes
+  become: yes
+  when: serve_service.changed
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Enable Tailscale Serve service
+  systemd:
+    name: tailscale-serve
+    enabled: yes
+  become: yes
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Start Tailscale Serve service (only if authenticated)
+  systemd:
+    name: tailscale-serve
+    state: started
+  become: yes
+  when: tailscale_status.rc == 0
+  register: serve_start
+  failed_when: false
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Get Tailscale Serve status
+  command: tailscale serve status
+  register: serve_status
+  changed_when: false
+  failed_when: false
+  tags: ['tailscale', 'tailscale-serve']
+
+# ============================================
+# Task 5: Display Setup Status
+# ============================================
+
+- name: Display Tailscale setup complete message
+  debug:
+    msg: |
+      ============================================
+      Tailscale Setup Complete!
+      ============================================
+      
+      {% if final_status.rc == 0 %}
+      Status: AUTHENTICATED
+      {{ final_status.stdout }}
+      
+      {% if serve_status.rc == 0 and serve_status.stdout != 'No serve config' %}
+      Tailscale Serve: CONFIGURED
+      {{ serve_status.stdout }}
+      
+      HTTPS Access: https://{{ tailscale_hostname }}.lamancha-smoot.ts.net/
+      
+      Service: tailscale-serve.service
+      Status: sudo systemctl status tailscale-serve
+      {% else %}
+      Tailscale Serve: NOT CONFIGURED
+      
+      Service created but not started.
+      Ensure MagicDNS and HTTPS are enabled in Tailscale admin console.
+      Then run: sudo systemctl start tailscale-serve
+      {% endif %}
+      {% else %}
+      Status: NOT AUTHENTICATED
+      
+      To authenticate, SSH into the server and run:
+      ssh neo
+      sudo tailscale up --hostname={{ tailscale_hostname }}
+      
+      Then visit the URL to approve the device.
+      
+      After authentication:
+      1. Enable MagicDNS in Tailscale admin console
+      2. Enable HTTPS certificates
+      3. Start Tailscale Serve: sudo systemctl start tailscale-serve
+      {% endif %}
+      
+      ============================================
