@@ -1,5 +1,6 @@
 return {
   "nvim-lualine/lualine.nvim",
+  event = "VeryLazy",
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
@@ -24,8 +25,8 @@ return {
         ignore_focus = { "NvimTree" },
         -- Always divide lualine in the middle
         always_divide_middle = true,
-        -- Disable global status
-        globalstatus = false,
+        -- Enable global status for single statusline across all windows
+        globalstatus = true,
         -- Refresh every 1000 miliseconds
         refresh = {
           statusline = 1000,

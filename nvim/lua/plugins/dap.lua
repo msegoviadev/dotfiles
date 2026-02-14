@@ -1,7 +1,33 @@
 return {
   {
     "mfussenegger/nvim-dap",
+    keys = {
+      { "<leader>dc", desc = "[D]ebug: Start/[C]ontinue" },
+      { "<leader>di", desc = "[D]ebug: Step [I]nto" },
+      { "<leader>do", desc = "[D]ebug: Step [O]ver" },
+      { "<leader>du", desc = "[D]ebug: Step O[u]t" },
+      { "<leader>db", desc = "[D]ebug: Toggle [B]reakpoint" },
+      { "<leader>dB", desc = "[D]ebug: Set Conditional [B]reakpoint" },
+      { "<leader>dt", desc = "[D]ebug: [T]erminate" },
+      { "<leader>dr", desc = "[D]ebug: Open [R]EPL" },
+      { "<leader>dl", desc = "[D]ebug: Run [L]ast" },
+    },
     config = function()
+      local dap = require("dap")
+
+      -- DAP keymaps
+      vim.keymap.set("n", "<leader>dc", dap.continue, { desc = "[D]ebug: Start/[C]ontinue" })
+      vim.keymap.set("n", "<leader>di", dap.step_into, { desc = "[D]ebug: Step [I]nto" })
+      vim.keymap.set("n", "<leader>do", dap.step_over, { desc = "[D]ebug: Step [O]ver" })
+      vim.keymap.set("n", "<leader>du", dap.step_out, { desc = "[D]ebug: Step O[u]t" })
+      vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "[D]ebug: Toggle [B]reakpoint" })
+      vim.keymap.set("n", "<leader>dB", function()
+        dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
+      end, { desc = "[D]ebug: Set Conditional [B]reakpoint" })
+      vim.keymap.set("n", "<leader>dt", dap.terminate, { desc = "[D]ebug: [T]erminate" })
+      vim.keymap.set("n", "<leader>dr", dap.repl.open, { desc = "[D]ebug: Open [R]EPL" })
+      vim.keymap.set("n", "<leader>dl", dap.run_last, { desc = "[D]ebug: Run [L]ast" })
+
       -- Configure DAP signs (breakpoint markers)
       vim.fn.sign_define("DapBreakpoint", { text = "🔴", texthl = "", linehl = "", numhl = "" })
       vim.fn.sign_define("DapBreakpointCondition", { text = "🟡", texthl = "", linehl = "", numhl = "" })
@@ -11,6 +37,10 @@ return {
   },
   {
     "rcarriga/nvim-dap-ui",
+    keys = {
+      { "<leader>dui", desc = "[D]ebug: Toggle [UI]" },
+      { "<leader>de", mode = { "n", "v" }, desc = "[D]ebug: [E]val" },
+    },
     dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
     config = function()
       local dap, dapui = require("dap"), require("dapui")
@@ -54,6 +84,14 @@ return {
           },
         },
       })
+
+      -- DAP UI keymaps
+      vim.keymap.set("n", "<leader>dui", function()
+        dapui.toggle({ reset = true })
+      end, { desc = "[D]ebug: Toggle [UI]" })
+
+      vim.keymap.set("n", "<leader>de", dapui.eval, { desc = "[D]ebug: [E]val under cursor" })
+      vim.keymap.set("v", "<leader>de", dapui.eval, { desc = "[D]ebug: [E]val selection" })
 
       -- Automatically open DAP UI (keep open to see test results)
       dap.listeners.after.event_initialized["dapui_config"] = function()

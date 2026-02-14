@@ -1,5 +1,6 @@
 return {
   "lewis6991/gitsigns.nvim",
+  event = "BufReadPre",
   config = function()
     require("gitsigns").setup({
       -- Configure signs to show in the gutter for different change types
@@ -39,10 +40,6 @@ return {
       attach_to_untracked = false,
       -- Disable current line blame virtual text
       current_line_blame = false,
-      -- Enable gitsigns visual indicators
-      signcolumn = true,
-      numhl = false,
-      linehl = false,
       -- Sign priority in the sign column
       sign_priority = 6,
       -- Debounce time for updates in milliseconds

@@ -3,7 +3,6 @@ return {
   config = function()
     vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle [E]xplorer" })
 
-    vim.keymap.set("n", "<C-h>", ":wincmd h<cr>", { desc = "Move focus to the left window" })
     local icons = require("config.icons")
 
     -- Set up custom highlights for git status colors (catppuccin-mocha palette)
@@ -23,7 +22,7 @@ return {
 
     require("nvim-tree").setup({
       hijack_netrw = true,
-      auto_reload_on_write = true,
+      auto_reload_on_write = false,
       sync_root_with_cwd = true,
       filters = {
         git_ignored = false,
@@ -96,25 +95,12 @@ return {
       update_focused_file = {
         enable = true,
         debounce_delay = 15,
-        update_root = true,
+        update_root = false,
         ignore_list = {},
       },
 
       diagnostics = {
-        enable = true,
-        show_on_dirs = false,
-        show_on_open_dirs = true,
-        debounce_delay = 50,
-        severity = {
-          min = vim.diagnostic.severity.HINT,
-          max = vim.diagnostic.severity.ERROR,
-        },
-        icons = {
-          hint = icons.diagnostics.BoldHint,
-          info = icons.diagnostics.BoldInformation,
-          warning = icons.diagnostics.BoldWarning,
-          error = icons.diagnostics.BoldError,
-        },
+        enable = false,
       },
     })
   end,

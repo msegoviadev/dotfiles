@@ -8,7 +8,7 @@
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
 -- Auto-reload files when changed outside of Neovim
-vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold", "CursorHoldI" }, {
+vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
   pattern = "*",
   command = "if mode() !~ '\\v(c|r.?|!|t)' && getcmdwintype() == '' | checktime | endif",
 })

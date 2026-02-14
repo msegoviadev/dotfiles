@@ -1,5 +1,9 @@
 return {
   "MagicDuck/grug-far.nvim",
+  keys = {
+    { "<leader>sr", mode = { "n", "v" }, desc = "[S]earch and [R]eplace" },
+    { "<leader>sra", mode = { "n", "v" }, desc = "[S]earch and [R]eplace in [A]ll files" },
+  },
   dependencies = {
     "nvim-tree/nvim-web-devicons",
   },
