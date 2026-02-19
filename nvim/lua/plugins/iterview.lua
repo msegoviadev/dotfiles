@@ -1,6 +1,8 @@
 -- Remote (published) version:
 return {
   "msegoviadev/nvim-iterview",
+  version = "*",
+  event = "VeryLazy",
   cmd = { "IterviewCheckpoint", "IterviewDiff", "IterviewHistory", "IterviewClear" },
   keys = {
     { "<leader>ic", desc = "[I]terview [C]heckpoint" },
