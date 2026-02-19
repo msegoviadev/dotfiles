@@ -1,5 +1,17 @@
 return {
   "nvim-tree/nvim-tree.lua",
+  init = function()
+    -- Auto-open nvim-tree when starting nvim with a directory or no args
+    vim.api.nvim_create_autocmd("VimEnter", {
+      callback = function(data)
+        local is_dir = vim.fn.isdirectory(data.file) == 1
+        local no_args = data.file == "" or data.file == vim.fn.getcwd()
+        if is_dir or no_args then
+          require("nvim-tree.api").tree.open()
+        end
+      end,
+    })
+  end,
   config = function()
     vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle [E]xplorer" })
 

@@ -2,6 +2,14 @@ return {
   {
     'nvim-telescope/telescope.nvim',
     branch = 'master',
+    cmd = { "Telescope" },
+    keys = {
+      { "<leader>fp", desc = "[F]ind [P]rojects" },
+      { "<leader>ff", desc = "[F]ind [F]iles" },
+      { "<leader>fg", desc = "[F]ind by [G]rep", mode = { "n", "v" } },
+      { "<leader>fb", desc = "[F]ind Existing [B]uffers" },
+      { "<leader>fd", desc = "[F]ind [D]iff" },
+    },
     dependencies = {
       {
         -- general purpose plugin used to build user interfaces in neovim plugins
@@ -496,6 +504,7 @@ return {
   },
   {
     'nvim-telescope/telescope-ui-select.nvim',
+    event = "VeryLazy",
     config = function()
       -- get access to telescopes navigation functions
       local actions = require("telescope.actions")
