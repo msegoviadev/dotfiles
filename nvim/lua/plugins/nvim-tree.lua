@@ -33,6 +33,18 @@ return {
     vim.api.nvim_set_hl(0, "NvimTreeFolderIcon", { fg = "#cdd6f4", bg = "NONE" })
 
     require("nvim-tree").setup({
+      filesystem_watchers = {
+        enable = true,
+        ignore_dirs = {
+          "node_modules", ".next", ".nuxt", "dist", "build", ".turbo",
+          "__pycache__", ".venv", "venv", ".mypy_cache", ".pytest_cache",
+          "target", ".gradle",
+          "vendor",
+          ".bundle",
+          ".terraform",
+          ".git",
+        },
+      },
       hijack_netrw = true,
       auto_reload_on_write = false,
       sync_root_with_cwd = true,

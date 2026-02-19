@@ -6,6 +6,7 @@ return {
   },
   {
     "williamboman/mason.nvim",
+    cmd = "Mason",
     config = function()
       require("mason").setup()
     end,
@@ -21,6 +22,7 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
+    event = "VeryLazy",
     dependencies = { "williamboman/mason-lspconfig.nvim" },
     config = function()
       vim.lsp.config.pyright = {
