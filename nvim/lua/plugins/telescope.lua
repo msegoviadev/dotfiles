@@ -444,6 +444,7 @@ return {
         }, {
           prompt_title = "Find Diff",
           results_title = summary,
+          initial_mode = "normal",
           finder = finders.new_table({
             results = changes,
             entry_maker = function(change)

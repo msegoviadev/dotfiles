@@ -19,6 +19,7 @@ return {
 -- Local development version (uncomment to use, comment the block above):
 -- return {
 --   dir = "~/workspace/nvim-iterview",
+--   event = "VeryLazy",
 --   cmd = { "IterviewCheckpoint", "IterviewDiff", "IterviewHistory", "IterviewClear" },
 --   keys = {
 --     { "<leader>ic", desc = "[I]terview [C]heckpoint" },
