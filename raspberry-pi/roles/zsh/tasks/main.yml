@@ -48,19 +48,6 @@
     update: no
   when: not syntax_highlighting_stat.stat.exists
 
-- name: Check if .zshrc already exists
-  stat:
-    path: "{{ home_dir }}/.zshrc"
-  register: zshrc_stat
-
-- name: Backup existing .zshrc if it exists
-  copy:
-    src: "{{ home_dir }}/.zshrc"
-    dest: "{{ home_dir }}/.zshrc.backup.{{ ansible_date_time.iso8601_basic_short }}"
-    remote_src: yes
-  when: zshrc_stat.stat.exists
-  ignore_errors: yes
-
 - name: Deploy .zshrc from template
   template:
     src: zshrc.j2
@@ -76,6 +63,12 @@
   command: "chsh -s /usr/bin/zsh {{ ansible_user }}"
   become: yes
   when: "'/usr/bin/zsh' not in current_shell.stdout"
+
+- name: Remove legacy .zshrc backup files
+  shell: rm -f {{ home_dir }}/.zshrc.backup.*
+  args:
+    executable: /bin/bash
+  changed_when: false
 
 - name: Display Zsh installation summary
   debug:

@@ -1,22 +1,18 @@
 [Unit]
-Description=Tailscale Serve - HTTPS Proxy for OpenCode
+Description=Tailscale Serve - HTTPS Proxy
 Documentation=https://tailscale.com/kb/1242/tailscale-serve
-After=network.target tailscaled.service opencode.service
+After=network.target tailscaled.service opencode.service deutsch-app.service
 Requires=tailscaled.service
-Wants=opencode.service
+Wants=opencode.service deutsch-app.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/usr/bin/tailscale serve --bg --https=443 http://localhost:4096
-ExecStop=/usr/bin/tailscale serve --https=443 off
-Restart=on-failure
-RestartSec=10s
-
-# Security hardening
-ProtectSystem=strict
-ProtectHome=yes
-NoNewPrivileges=true
+ExecStart=/bin/bash -c '\
+  /usr/bin/tailscale serve reset && \
+  /usr/bin/tailscale serve --bg --https=443 http://localhost:{{ opencode_port }} && \
+  /usr/bin/tailscale serve --bg --https=443 --set-path /deutsch http://localhost:{{ deutsch_app_port }}/deutsch'
+ExecStop=/usr/bin/tailscale serve reset
 
 [Install]
 WantedBy=multi-user.target

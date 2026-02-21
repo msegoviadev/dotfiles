@@ -1,0 +1,24 @@
+[Unit]
+Description=Deutsch Learning App (Next.js)
+Documentation=https://nextjs.org/docs
+After=network.target
+
+[Service]
+Type=simple
+User={{ ansible_user }}
+Group={{ ansible_user }}
+WorkingDirectory={{ deutsch_app_dir }}
+Environment="HOME={{ home_dir }}"
+Environment="NVM_DIR={{ home_dir }}/.nvm"
+Environment="NODE_ENV=production"
+ExecStart=/bin/bash -c 'source {{ home_dir }}/.nvm/nvm.sh && npm start'
+Restart=on-failure
+RestartSec=10s
+StartLimitInterval=300s
+StartLimitBurst=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=deutsch-app
+
+[Install]
+WantedBy=multi-user.target

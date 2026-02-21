@@ -38,6 +38,10 @@
       become: no
       tags: ['opencode', 'server']
 
+    - role: deutsch-app
+      become: no
+      tags: ['deutsch-app']
+
   post_tasks:
     - name: Display completion message
       debug:

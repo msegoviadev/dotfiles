@@ -76,6 +76,12 @@ opencode_port: 4096
 opencode_enable_mdns: false
 
 # ============================================
+# Deutsch App Configuration
+# ============================================
+deutsch_app_port: 3000
+deutsch_app_dir: "{{ home_dir }}/Documents/marcos/deutsch/app"
+
+# ============================================
 # Tailscale Configuration
 # ============================================
 tailscale_hostname: neo
@@ -83,6 +89,7 @@ tailscale_hostname: neo
 
 # Tailscale Serve Configuration
 # - HTTPS proxy runs on port 443
-# - Proxies to OpenCode on port 4096
+# - /ai/      proxies to OpenCode on port 4096
+# - /deutsch/ proxies to Deutsch App on port 3000
 # - Certificates managed automatically by Tailscale
 # - Service: tailscale-serve.service

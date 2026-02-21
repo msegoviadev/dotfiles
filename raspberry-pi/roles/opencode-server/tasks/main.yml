@@ -49,16 +49,6 @@
   register: npm_version
   changed_when: false
 
-- name: Add nvm to .zshrc (if not already present)
-  blockinfile:
-    path: "{{ home_dir }}/.zshrc"
-    marker: "# {mark} ANSIBLE MANAGED BLOCK - NVM"
-    block: |
-      export NVM_DIR="$HOME/.nvm"
-      [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-      [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-    state: present
-
 - name: Display Node.js and npm versions
   debug:
     msg: "Node.js {{ node_version.stdout }}, npm {{ npm_version.stdout }}"
@@ -229,6 +219,41 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0755'
+
+# ============================================
+# Task 3B: Sync OpenCode Config from Dotfiles
+# ============================================
+
+- name: Sync opencode.jsonc
+  copy:
+    src: "{{ playbook_dir }}/../opencode/opencode.jsonc"
+    dest: "{{ home_dir }}/.config/opencode/opencode.jsonc"
+    mode: '0644'
+  notify: restart opencode
+  tags: ['opencode', 'opencode-config']
+
+- name: Sync AGENTS.md
+  copy:
+    src: "{{ playbook_dir }}/../opencode/AGENTS.md"
+    dest: "{{ home_dir }}/.config/opencode/AGENTS.md"
+    mode: '0644'
+  tags: ['opencode', 'opencode-config']
+
+- name: Sync skill directory
+  copy:
+    src: "{{ playbook_dir }}/../opencode/skill/"
+    dest: "{{ home_dir }}/.config/opencode/skill/"
+    mode: '0644'
+    directory_mode: '0755'
+  tags: ['opencode', 'opencode-config']
+
+- name: Sync plugin directory
+  copy:
+    src: "{{ playbook_dir }}/../opencode/plugin/"
+    dest: "{{ home_dir }}/.config/opencode/plugin/"
+    mode: '0644'
+    directory_mode: '0755'
+  tags: ['opencode', 'opencode-config']
 
 # ============================================
 # Task 4: Deploy Systemd Service

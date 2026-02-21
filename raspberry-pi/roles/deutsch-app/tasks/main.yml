@@ -1,0 +1,100 @@
+---
+# ============================================
+# Deutsch App Role
+# ============================================
+# Purpose: Deploy and manage the Deutsch Learning Next.js app
+# Assumes: app is pre-built (npm run build already run)
+# ============================================
+
+# ============================================
+# Task 1: Deploy Systemd Service
+# ============================================
+
+- name: Deploy deutsch-app systemd service
+  template:
+    src: deutsch-app.service.j2
+    dest: /etc/systemd/system/deutsch-app.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  register: deutsch_service_file
+  tags: ['deutsch-app']
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+  become: yes
+  when: deutsch_service_file.changed
+  tags: ['deutsch-app']
+
+- name: Enable deutsch-app service
+  systemd:
+    name: deutsch-app
+    enabled: yes
+  become: yes
+  tags: ['deutsch-app']
+
+- name: Start deutsch-app service
+  systemd:
+    name: deutsch-app
+    state: started
+  become: yes
+  tags: ['deutsch-app']
+
+# ============================================
+# Task 2: Deploy Build Watcher (Path + Service units)
+# ============================================
+
+- name: Deploy deutsch-app-deploy.service
+  template:
+    src: deutsch-app-deploy.service.j2
+    dest: /etc/systemd/system/deutsch-app-deploy.service
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  register: deploy_service_file
+  tags: ['deutsch-app']
+
+- name: Deploy deutsch-app-deploy.path
+  template:
+    src: deutsch-app-deploy.path.j2
+    dest: /etc/systemd/system/deutsch-app-deploy.path
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  register: deploy_path_file
+  tags: ['deutsch-app']
+
+- name: Reload systemd daemon for deploy watcher
+  systemd:
+    daemon_reload: yes
+  become: yes
+  when: deploy_service_file.changed or deploy_path_file.changed
+  tags: ['deutsch-app']
+
+- name: Enable and start deutsch-app-deploy.path watcher
+  systemd:
+    name: deutsch-app-deploy.path
+    enabled: yes
+    state: started
+  become: yes
+  tags: ['deutsch-app']
+
+# ============================================
+# Task 3: Display Status
+# ============================================
+
+- name: Check deutsch-app service status
+  systemd:
+    name: deutsch-app
+  register: deutsch_service_status
+  become: yes
+  tags: ['deutsch-app']
+
+- name: Display deutsch-app status
+  debug:
+    msg: "deutsch-app service is {{ deutsch_service_status.status.ActiveState }}"
+  tags: ['deutsch-app']

@@ -109,7 +109,14 @@
     name: tailscale-serve
     state: started
   become: yes
-  when: tailscale_status.rc == 0
+  when: tailscale_status is defined and tailscale_status.rc == 0
+
+- name: Restart Tailscale Serve service if config changed
+  systemd:
+    name: tailscale-serve
+    state: restarted
+  become: yes
+  when: serve_service.changed
   register: serve_start
   failed_when: false
   tags: ['tailscale', 'tailscale-serve']

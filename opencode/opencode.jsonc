@@ -1,19 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "theme": "opencode",
-  "model": "anthropic/claude-sonnet-4-5",
+  "model": "anthropic/claude-sonnet-4-6",
   "small_model": "anthropic/claude-haiku-4-5",
-  "autoupdate": true,
-  "tui": {
-    "scroll_speed": 3
-  },
-  "plugin": [],
+  "autoupdate": false,
+  "instructions": ["AGENTS.md"],
   "permission": {
     "edit": "allow",
     "webfetch": "ask",
     "doom_loop": "ask",
     "external_directory": "ask",
     "bash": {
+      "*": "ask",
       "git status": "allow",
       "git diff": "allow",
       "git diff *": "allow",
@@ -67,6 +65,8 @@
       "git pull *": "ask",
       "git merge *": "ask",
       "git rebase *": "ask",
+      "su *": "deny",
+      "doas *": "deny",
       "rm -rf *": "deny",
       "rm -fr *": "deny",
       "sudo *": "deny",
@@ -78,7 +78,7 @@
       "chown *": "deny",
       "kill -9 *": "deny",
       "pkill *": "deny",
-      ": > *": "deny",
+      ": > *": "deny"
     }
   }
 }
