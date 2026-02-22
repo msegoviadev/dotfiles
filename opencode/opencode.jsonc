@@ -4,6 +4,11 @@
   "model": "anthropic/claude-sonnet-4-6",
   "small_model": "anthropic/claude-haiku-4-5",
   "autoupdate": false,
+  "agent": {
+    "plan": {
+      "model": "anthropic/claude-sonnet-4-6"
+    }
+  },
   "instructions": ["AGENTS.md"],
   "permission": {
     "edit": "allow",
