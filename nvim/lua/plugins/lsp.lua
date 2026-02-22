@@ -128,8 +128,16 @@ return {
             vim.tbl_extend("force", opts, { desc = "[G]oto [D]efinition" }))
           vim.keymap.set("n", "gr", function()
             require("telescope.builtin").lsp_references({
-              jump_type = "tab",
               show_line = false,
+              -- exclude JDK internals, Maven/Gradle caches, and JDTLS workspace so
+              -- results only show references within the current project
+              file_ignore_patterns = {
+                "^/usr/",
+                "^" .. vim.fn.expand("~") .. "/.m2/",
+                "^" .. vim.fn.expand("~") .. "/.gradle/",
+                "^" .. vim.fn.expand("~") .. "/.jdtls/",
+                "^" .. vim.fn.expand("~") .. "/.cache/",
+              },
             })
           end, vim.tbl_extend("force", opts, { desc = "[G]oto [R]eferences" }))
           vim.keymap.set("n", "<leader>l", vim.lsp.buf.format, vim.tbl_extend("force", opts, { desc = "[L]SP Format" }))
