@@ -4,13 +4,13 @@ return {
     ft = { 'java' },
     dependencies = {
       'MunifTanjim/nui.nvim',
-      'mfussenegger/nvim-dap',
       {
         'JavaHello/spring-boot.nvim',
         commit = '218c0c26c14d99feca778e4d13f5ec3e8b1b60f0',
       },
     },
     config = function()
+      -- Configure nvim-java with optimized settings
       require('java').setup({
         checks = {
           nvim_jdtls_conflict = false,
@@ -29,7 +29,7 @@ return {
         },
 
         java_debug_adapter = {
-          enable = true,
+          enable = false, -- Disabled: user doesn't need debugging
         },
 
         spring_boot_tools = {
@@ -37,61 +37,154 @@ return {
         },
       })
 
-      -- Configure runtimes as per README
+      -- Track import progress for notifications
+      local import_in_progress = false
+
+      -- LSP Progress handler for Maven import notifications
+      vim.lsp.handlers['$/progress'] = function(_, result, ctx)
+        local client = vim.lsp.get_client_by_id(ctx.client_id)
+        if not client or client.name ~= 'jdtls' then
+          return
+        end
+
+        local value = result.value
+        if not value then
+          return
+        end
+
+        if value.kind == 'begin' and value.title then
+          -- Check if this is a Maven import operation
+          if value.title:match('Importing') or value.title:match('Building') then
+            import_in_progress = true
+            vim.notify('📦 ' .. value.title, vim.log.levels.INFO)
+          end
+        elseif value.kind == 'end' and import_in_progress then
+          import_in_progress = false
+          vim.notify('✅ Import complete', vim.log.levels.INFO)
+          -- Auto-dismiss after 3 seconds
+          vim.defer_fn(function()
+            vim.notify('') -- Clear notification
+          end, 3000)
+        end
+      end
+
+      -- Configure JDTLS with Maven auto-import settings
       vim.lsp.config('jdtls', {
         settings = {
           java = {
             configuration = {
               runtimes = {
                 {
-                  name = "JavaSE-1.8",
-                  path = vim.fn.expand("~/.sdkman/candidates/java/8.0.462-amzn"),
+                  name = 'JavaSE-1.8',
+                  path = vim.fn.expand('~/.sdkman/candidates/java/8.0.462-amzn'),
                   default = true,
                 },
                 {
-                  name = "JavaSE-21",
-                  path = vim.fn.expand("~/.sdkman/candidates/java/21.0.9-amzn"),
+                  name = 'JavaSE-21',
+                  path = vim.fn.expand('~/.sdkman/candidates/java/21.0.9-amzn'),
                 },
-              }
-            }
-          }
-        }
+              },
+            },
+            import = {
+              maven = {
+                enabled = true,
+              },
+              gradle = {
+                enabled = true,
+              },
+            },
+            project = {
+              importOnFirstTimeStartup = 'automatic',
+              importHint = true,
+            },
+            maven = {
+              downloadSources = true,
+              updateSnapshots = true,
+            },
+            -- Improve performance for large projects
+            maxConcurrentBuilds = 2,
+          },
+        },
       })
 
       -- Enable JDTLS
       vim.lsp.enable('jdtls')
 
+      -- Helper function to get JDTLS status
+      local function get_jdtls_status()
+        local clients = vim.lsp.get_clients({ name = 'jdtls' })
+        if #clients == 0 then
+          return 'JDTLS: Not running'
+        end
+
+        local client = clients[1]
+        local status = 'JDTLS: Running'
+
+        if import_in_progress then
+          status = status .. ' (importing...)'
+        else
+          status = status .. ' (ready)'
+        end
+
+        -- Show workspace info
+        if client.config and client.config.root_dir then
+          status = status .. ' | Project: ' .. vim.fn.fnamemodify(client.config.root_dir, ':t')
+        end
+
+        return status
+      end
+
+      -- Force reindex current project
+      local function force_reindex()
+        vim.notify('🔄 Force reindexing project...', vim.log.levels.INFO)
+        vim.cmd('JavaBuildBuildWorkspace')
+      end
+
+      -- Clear JDTLS workspace and restart
+      local function clear_workspace_and_restart()
+        local workspace_path = vim.fn.expand('~/.cache/jdtls/')
+        vim.notify('🧹 Clearing JDTLS workspace...', vim.log.levels.WARN)
+
+        -- Stop JDTLS
+        local clients = vim.lsp.get_clients({ name = 'jdtls' })
+        for _, client in ipairs(clients) do
+          vim.lsp.stop_client(client.id, true)
+        end
+
+        -- Clear workspace and restart in background
+        vim.defer_fn(function()
+          vim.fn.system('rm -rf ' .. workspace_path .. '/*')
+          vim.notify('✅ Workspace cleared. Restarting JDTLS...', vim.log.levels.INFO)
+          -- Re-enable JDTLS with fresh workspace
+          vim.lsp.enable('jdtls')
+        end, 500)
+      end
+
       -- Java keymaps (only loaded when Java files are opened)
-      vim.keymap.set("n", "<leader>jt", function()
-        require('dapui').open()
+      -- Test keymaps (kept)
+      vim.keymap.set('n', '<leader>jt', function()
         require('java').test.run_current_method()
-      end, { desc = "[J]ava: [T]est Method" })
+      end, { desc = '[J]ava: [T]est Method' })
 
-      vim.keymap.set("n", "<leader>jT", function()
-        require('dapui').open()
+      vim.keymap.set('n', '<leader>jT', function()
         require('java').test.run_current_class()
-      end, { desc = "[J]ava: [T]est Class" })
+      end, { desc = '[J]ava: [T]est Class' })
 
-      vim.keymap.set("n", "<leader>jr", ":JavaTestViewLastReport<CR>", { desc = "[J]ava: Test [R]eport" })
-      vim.keymap.set("n", "<leader>jd", ":JavaTestDebugCurrentMethod<CR>", { desc = "[J]ava: [D]ebug Test Method" })
-      vim.keymap.set("n", "<leader>jD", ":JavaTestDebugCurrentClass<CR>", { desc = "[J]ava: [D]ebug Test Class" })
-      vim.keymap.set("n", "<leader>ja", ":JavaRunnerRunMain<CR>", { desc = "[J]ava: Run [A]pplication" })
-      vim.keymap.set("n", "<leader>js", ":JavaRunnerStopMain<CR>", { desc = "[J]ava: [S]top Application" })
-      vim.keymap.set("n", "<leader>jl", ":JavaRunnerToggleLogs<CR>", { desc = "[J]ava: Toggle [L]ogs" })
-      vim.keymap.set("n", "<leader>jv", ":JavaRefactorExtractVariable<CR>", { desc = "[J]ava: Extract [V]ariable" })
-      vim.keymap.set("v", "<leader>jv", ":JavaRefactorExtractVariable<CR>", { desc = "[J]ava: Extract [V]ariable" })
-      vim.keymap.set("n", "<leader>jc", ":JavaRefactorExtractConstant<CR>", { desc = "[J]ava: Extract [C]onstant" })
-      vim.keymap.set("v", "<leader>jm", ":JavaRefactorExtractMethod<CR>", { desc = "[J]ava: Extract [M]ethod" })
-      vim.keymap.set("n", "<leader>jR", ":JavaSettingsChangeRuntime<CR>", { desc = "[J]ava: Change [R]untime" })
-      vim.keymap.set("n", "<leader>jb", ":JavaBuildBuildWorkspace<CR>", { desc = "[J]ava: [B]uild Workspace" })
-      vim.keymap.set("n", "<leader>jC", ":JavaBuildCleanWorkspace<CR>", { desc = "[J]ava: [C]lean Workspace" })
+      vim.keymap.set('n', '<leader>jr', ':JavaTestViewLastReport<CR>', { desc = '[J]ava: Test [R]eport' })
+
+      -- Utility keymaps
+      vim.keymap.set('n', '<leader>jR', force_reindex, { desc = '[J]ava: Force [R]eindex' })
+      vim.keymap.set('n', '<leader>j?', function()
+        vim.notify(get_jdtls_status(), vim.log.levels.INFO)
+      end, { desc = '[J]ava: Show [?] Status' })
+      vim.keymap.set('n', '<leader>jX', clear_workspace_and_restart, { desc = '[J]ava: Clear Workspace and Restart' })
     end,
   },
   {
-    "neovim/nvim-lspconfig",
+    'neovim/nvim-lspconfig',
     opts = {
       servers = {
-        jdtls = false,  -- Handled by nvim-java
+        jdtls = false, -- Handled by nvim-java
       },
     },
   },
