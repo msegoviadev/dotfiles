@@ -77,6 +77,16 @@ Review the diff for:
 - Missing tests or documentation
 - Edge cases
 
+### External Fact Verification
+
+Before flagging issues related to external standards, library versions, or specification versions, **verify the claim using WebSearch**. Do not rely on training knowledge for:
+- Package/library version validity or recency
+- Specification version numbers (OpenAPI, JSON Schema, protobuf, etc.)
+- Protocol or standard support status
+- Any fact that may have changed after training cutoff
+
+Only raise the concern after confirming it is accurate.
+
 ### Step 5: Generate Inline Comments
 
 For each finding, prepare:
