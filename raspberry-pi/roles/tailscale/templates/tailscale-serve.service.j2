@@ -8,6 +8,11 @@ Wants=opencode.service deutsch-app.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
+
+# Wait for Tailscale to be fully connected (prevent "netMap is nil" errors)
+# Polls every 2 seconds for up to 60 seconds
+ExecStartPre=/bin/bash -c 'for i in {1..30}; do /usr/bin/tailscale status --json 2>/dev/null | grep -q '"'"'"BackendState": "Running"'"'"' && exit 0; sleep 2; done; echo "Tailscale not ready after 60s"; exit 1'
+
 ExecStart=/bin/bash -c '\
   /usr/bin/tailscale serve reset && \
   /usr/bin/tailscale serve --bg --https=443 http://localhost:{{ opencode_port }} && \

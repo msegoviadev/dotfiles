@@ -26,4 +26,3 @@ window-height = 50
 
 # Save window state so manual resizes persist
 window-save-state = always
-
