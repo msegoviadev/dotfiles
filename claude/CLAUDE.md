@@ -15,5 +15,7 @@ IMPORTANT, always consider the following rules:
 - Is it about finding TEXT/strings? use 'rg'
 - Is it about finding CODE STRUCTURE? use 'ast-grep'
 - Is it about SELECTING from multiple results? pipe to 'fzf'
-- Is it about interacting with JSON? use 'jq'
+- Is it about interacting with JSON? use 'jq'.
+
+> **CRITICAL jq rule — never break this:** The Bash tool escapes `!` to `\!`, which breaks `!=` in jq filters. NEVER write `select(.field != null)` or any `!=` expression inline. Always use `select(.field)` instead (null is falsy in jq). If `!=` is truly required, write the filter to a file with the Write tool and pass it via `jq -f filter.jq`.
 - Is it about interacting with YAML or XML? use 'yq'

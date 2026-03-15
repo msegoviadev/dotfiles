@@ -49,8 +49,7 @@ https://sygnum.atlassian.net/wiki/spaces/SPACE/pages/123456789/Page+Title
 
 **By title search** — find the page ID when only a title is known:
 ```bash
-hurl --variables-file ~/.config/hurl/confluence/default.env \
-  --variable title="<title>" - <<'EOF' | jq '.results[] | {id, title, spaceId}'
+cat > $TMPDIR/hurl_req.hurl << 'EOF'
 GET {{base_url_confluence}}/api/v2/pages
 [QueryStringParams]
 title: {{title}}
@@ -60,13 +59,15 @@ limit: 5
 user: {{email}}:{{token}}
 cacert: {{cacert}}
 EOF
+hurl --variables-file ~/.config/hurl/confluence/default.env \
+  --variable title="<title>" \
+  $TMPDIR/hurl_req.hurl | jq '.results[] | {id, title, spaceId}'
 ```
 
 **List pages in a space** (use the space key visible in Confluence URLs):
 ```bash
 # First get the spaceId from the space key
-hurl --variables-file ~/.config/hurl/confluence/default.env \
-  --variable space_key="<SPACE_KEY>" - <<'EOF' | jq '.results[] | {id, key, name}'
+cat > $TMPDIR/hurl_req.hurl << 'EOF'
 GET {{base_url_confluence}}/api/v2/spaces
 [QueryStringParams]
 keys: {{space_key}}
@@ -74,10 +75,12 @@ keys: {{space_key}}
 user: {{email}}:{{token}}
 cacert: {{cacert}}
 EOF
+hurl --variables-file ~/.config/hurl/confluence/default.env \
+  --variable space_key="<SPACE_KEY>" \
+  $TMPDIR/hurl_req.hurl | jq '.results[] | {id, key, name}'
 
 # Then list pages in that space
-hurl --variables-file ~/.config/hurl/confluence/default.env \
-  --variable space_id="<space_id>" - <<'EOF' | jq '.results[] | {id, title}'
+cat > $TMPDIR/hurl_req.hurl << 'EOF'
 GET {{base_url_confluence}}/api/v2/pages
 [QueryStringParams]
 spaceId: {{space_id}}
@@ -86,13 +89,15 @@ limit: 25
 user: {{email}}:{{token}}
 cacert: {{cacert}}
 EOF
+hurl --variables-file ~/.config/hurl/confluence/default.env \
+  --variable space_id="<space_id>" \
+  $TMPDIR/hurl_req.hurl | jq '.results[] | {id, title}'
 ```
 
 ### Step 3: Read page content
 
 ```bash
-hurl --variables-file ~/.config/hurl/confluence/default.env \
-  --variable page_id="<page_id>" - <<'EOF' | jq '{id, title, version: .version.number, body: .body.storage.value, spaceId}'
+cat > $TMPDIR/hurl_req.hurl << 'EOF'
 GET {{base_url_confluence}}/api/v2/pages/{{page_id}}
 [QueryStringParams]
 body-format: storage
@@ -100,6 +105,9 @@ body-format: storage
 user: {{email}}:{{token}}
 cacert: {{cacert}}
 EOF
+hurl --variables-file ~/.config/hurl/confluence/default.env \
+  --variable page_id="<page_id>" \
+  $TMPDIR/hurl_req.hurl | jq '{id, title, version: .version.number, body: .body.storage.value, spaceId}'
 ```
 
 The response includes:
@@ -173,8 +181,7 @@ There are two comment types. Fetch both:
 
 **Footer comments** (page-level discussion):
 ```bash
-hurl --variables-file ~/.config/hurl/confluence/default.env \
-  --variable page_id="<page_id>" - <<'EOF' | jq '.results[] | {id, author: .author.displayName, body: .body.storage.value, replies: ._links.replies}'
+cat > $TMPDIR/hurl_req.hurl << 'EOF'
 GET {{base_url_confluence}}/api/v2/pages/{{page_id}}/footer-comments
 [QueryStringParams]
 body-format: storage
@@ -183,12 +190,14 @@ limit: 50
 user: {{email}}:{{token}}
 cacert: {{cacert}}
 EOF
+hurl --variables-file ~/.config/hurl/confluence/default.env \
+  --variable page_id="<page_id>" \
+  $TMPDIR/hurl_req.hurl | jq '.results[] | {id, author: .author.displayName, body: .body.storage.value, replies: ._links.replies}'
 ```
 
 **Inline comments** (tied to specific text):
 ```bash
-hurl --variables-file ~/.config/hurl/confluence/default.env \
-  --variable page_id="<page_id>" - <<'EOF' | jq '.results[] | {id, author: .author.displayName, body: .body.storage.value, status}'
+cat > $TMPDIR/hurl_req.hurl << 'EOF'
 GET {{base_url_confluence}}/api/v2/pages/{{page_id}}/inline-comments
 [QueryStringParams]
 body-format: storage
@@ -197,12 +206,14 @@ limit: 50
 user: {{email}}:{{token}}
 cacert: {{cacert}}
 EOF
+hurl --variables-file ~/.config/hurl/confluence/default.env \
+  --variable page_id="<page_id>" \
+  $TMPDIR/hurl_req.hurl | jq '.results[] | {id, author: .author.displayName, body: .body.storage.value, status}'
 ```
 
 For each comment that has replies, fetch the thread:
 ```bash
-hurl --variables-file ~/.config/hurl/confluence/default.env \
-  --variable comment_id="<comment_id>" - <<'EOF' | jq '.results[] | {id, author: .author.displayName, body: .body.storage.value}'
+cat > $TMPDIR/hurl_req.hurl << 'EOF'
 GET {{base_url_confluence}}/api/v2/comments/{{comment_id}}/replies
 [QueryStringParams]
 body-format: storage
@@ -210,6 +221,9 @@ body-format: storage
 user: {{email}}:{{token}}
 cacert: {{cacert}}
 EOF
+hurl --variables-file ~/.config/hurl/confluence/default.env \
+  --variable comment_id="<comment_id>" \
+  $TMPDIR/hurl_req.hurl | jq '.results[] | {id, author: .author.displayName, body: .body.storage.value}'
 ```
 
 ### Step B: Assess each comment
