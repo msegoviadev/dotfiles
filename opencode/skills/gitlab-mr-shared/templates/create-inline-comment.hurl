@@ -1,6 +1,8 @@
 POST https://gitlab.com/api/v4/projects/{{project_id}}/merge_requests/{{mr_iid}}/discussions
 Authorization: Bearer {{token}}
 Content-Type: application/json
+[Options]
+cacert: {{cacert}}
 {
   "body": "{{body}}",
   "position": {

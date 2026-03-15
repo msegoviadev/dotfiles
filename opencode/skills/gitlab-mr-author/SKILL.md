@@ -18,6 +18,7 @@ Use this skill when:
 - hurl installed: `brew install hurl` (for potential inline comments, though author usually only replies)
 - jq installed: `brew install jq`
 - User has push access to the branch
+- `<SKILLS_DIR>`: the root skills directory (e.g., `~/.config/opencode/skills/` for opencode, `~/.claude/skills/` for claude-code)
 
 ## Workflow
 

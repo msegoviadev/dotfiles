@@ -18,6 +18,7 @@ Use this skill when:
 - hurl installed: `brew install hurl`
 - jq installed: `brew install jq`
 - User has comment access to the project
+- `<SKILLS_DIR>`: the root skills directory (e.g., `~/.config/opencode/skills/` for opencode, `~/.claude/skills/` for claude-code)
 
 ## Workflow
 
@@ -140,6 +141,7 @@ Resolve the template path based on where `gitlab-mr-review/SKILL.md` is installe
 
 ```bash
 hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment.hurl \
+  --variables-file ~/.config/hurl/gitlab/default.env \
   --variable token=$TOKEN \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
@@ -157,6 +159,7 @@ Use `create-inline-comment-old.hurl` with `old_path` and `old_line` instead:
 
 ```bash
 hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment-old.hurl \
+  --variables-file ~/.config/hurl/gitlab/default.env \
   --variable token=$TOKEN \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
@@ -167,8 +170,6 @@ hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment-old.hurl \
   --variable old_path=src/file.ts \
   --variable old_line=20
 ```
-
-Where `<SKILLS_DIR>` is the root skills directory (e.g., `~/.config/opencode/skills/` for opencode, or equivalent for other tools).
 
 ## NEVER Auto-Post
 

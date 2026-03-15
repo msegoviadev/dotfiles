@@ -120,6 +120,7 @@ TOKEN=$(glab auth status -t 2>&1 | grep "Token found:" | awk '{print $NF}')
 
 # Use hurl template
 hurl create-inline-comment.hurl \
+  --variables-file ~/.config/hurl/gitlab/default.env \
   --variable token=$TOKEN \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
@@ -139,6 +140,7 @@ Use `create-inline-comment-old.hurl` with `old_path` and `old_line` instead:
 TOKEN=$(glab auth status -t 2>&1 | grep "Token found:" | awk '{print $NF}')
 
 hurl create-inline-comment-old.hurl \
+  --variables-file ~/.config/hurl/gitlab/default.env \
   --variable token=$TOKEN \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
@@ -186,6 +188,7 @@ Resolve the path based on where `gitlab-mr-shared/` is installed.
 Usage:
 ```bash
 hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment.hurl \
+  --variables-file ~/.config/hurl/gitlab/default.env \
   --variable token=$TOKEN \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
