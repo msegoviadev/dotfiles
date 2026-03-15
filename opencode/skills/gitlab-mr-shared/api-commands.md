@@ -115,13 +115,9 @@ glab api "projects/:id/merge_requests/:iid/discussions/:discussion_id"
 **IMPORTANT:** glab api does NOT support nested JSON bodies for inline comments. Use hurl instead.
 
 ```bash
-# Get token first
-TOKEN=$(glab auth status -t 2>&1 | grep "Token found:" | awk '{print $NF}')
-
-# Use hurl template
 hurl create-inline-comment.hurl \
   --variables-file ~/.config/hurl/gitlab/default.env \
-  --variable token=$TOKEN \
+  --variable token="$(glab auth status -t 2>&1 | grep 'Token found:' | awk '{print $NF}')" \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
   --variable body="Your comment here" \
@@ -137,11 +133,9 @@ hurl create-inline-comment.hurl \
 Use `create-inline-comment-old.hurl` with `old_path` and `old_line` instead:
 
 ```bash
-TOKEN=$(glab auth status -t 2>&1 | grep "Token found:" | awk '{print $NF}')
-
 hurl create-inline-comment-old.hurl \
   --variables-file ~/.config/hurl/gitlab/default.env \
-  --variable token=$TOKEN \
+  --variable token="$(glab auth status -t 2>&1 | grep 'Token found:' | awk '{print $NF}')" \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
   --variable body="Your comment here" \
@@ -189,7 +183,7 @@ Usage:
 ```bash
 hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment.hurl \
   --variables-file ~/.config/hurl/gitlab/default.env \
-  --variable token=$TOKEN \
+  --variable token="$(glab auth status -t 2>&1 | grep 'Token found:' | awk '{print $NF}')" \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
   --variable body="Comment text" \

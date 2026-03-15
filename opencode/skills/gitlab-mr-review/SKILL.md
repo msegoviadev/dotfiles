@@ -39,6 +39,9 @@ Extract:
 TOKEN=$(glab auth status -t 2>&1 | grep "Token found:" | awk '{print $NF}')
 ```
 
+**Note:** `$TOKEN` does not persist across separate Bash invocations. When running the hurl
+commands in Step 7, inline the token capture directly rather than relying on this variable.
+
 Get MR metadata and commit SHAs (required for inline comments):
 
 ```bash
@@ -142,7 +145,7 @@ Resolve the template path based on where `gitlab-mr-review/SKILL.md` is installe
 ```bash
 hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment.hurl \
   --variables-file ~/.config/hurl/gitlab/default.env \
-  --variable token=$TOKEN \
+  --variable token="$(glab auth status -t 2>&1 | grep 'Token found:' | awk '{print $NF}')" \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
   --variable body="Comment text" \
@@ -160,7 +163,7 @@ Use `create-inline-comment-old.hurl` with `old_path` and `old_line` instead:
 ```bash
 hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment-old.hurl \
   --variables-file ~/.config/hurl/gitlab/default.env \
-  --variable token=$TOKEN \
+  --variable token="$(glab auth status -t 2>&1 | grep 'Token found:' | awk '{print $NF}')" \
   --variable project_id=user%2Frepo \
   --variable mr_iid=123 \
   --variable body="Comment text" \
