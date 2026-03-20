@@ -2,7 +2,7 @@
 name: confluence
 description: Read, write, and respond to comments on Confluence pages via the REST API v2. Use when the user wants to fetch page content, search pages, update a page, create a new page, or address comments and suggestions left by others.
 metadata:
-  tags: confluence, wiki, page, comment, feedback, atlassian, sygnum
+  tags: confluence, wiki, page, comment, feedback, atlassian
 ---
 
 ## When to Use
@@ -12,7 +12,7 @@ Use this skill when:
 - User wants to update a page (e.g., add release notes, fix grammar, restructure content)
 - User wants to create a new page in a Confluence space
 - User wants to address, reply to, or act on comments left on a page
-- User references a Confluence URL (`sygnum.atlassian.net/wiki`)
+- User references a Confluence URL (`your-org.atlassian.net/wiki`)
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ If missing, stop and guide the user to set up the credentials file from the Prer
 
 **From a URL** — extract the page ID from the path:
 ```
-https://sygnum.atlassian.net/wiki/spaces/SPACE/pages/123456789/Page+Title
+https://your-org.atlassian.net/wiki/spaces/SPACE/pages/123456789/Page+Title
                                                       ^^^^^^^^^^ page ID
 ```
 
@@ -130,6 +130,18 @@ Present the proposed content and get explicit approval before proceeding.
 
 ### Step 5: Execute the write operation
 
+> **Warning: hurl templates do not JSON-escape `{{body}}`.**
+> Confluence storage format HTML always contains double quotes in XML attributes
+> (e.g. `ac:local-id="..."`, `href="..."`). Passing such content via `--variable body=...`
+> produces malformed JSON and the request fails with HTTP 400.
+>
+> For any body containing HTML attributes, use Python instead:
+> - Build the body string in Python
+> - Serialize the full payload with `json.dumps()` (handles all escaping)
+> - Send with `urllib.request` (stdlib) or `requests`
+>
+> Reserve the hurl templates for simple plain-text bodies with no double quotes.
+
 **Creating a page** — use the create template. Requires `spaceId` and optionally `parentId`:
 
 ```bash
@@ -157,7 +169,7 @@ hurl --variables-file ~/.config/hurl/confluence/default.env \
 
 After creating or updating, the page is accessible at:
 ```
-https://sygnum.atlassian.net/wiki/spaces/<SPACE_KEY>/pages/<page_id>
+https://your-org.atlassian.net/wiki/spaces/<SPACE_KEY>/pages/<page_id>
 ```
 
 ## When to Load Full References
@@ -275,7 +287,7 @@ hurl --variables-file ~/.config/hurl/confluence/default.env \
 
 ## Example Usage
 
-**User:** "Update the release page at https://sygnum.atlassian.net/wiki/spaces/ENG/pages/987654/v2.5+Release+Notes with these new items: ..."
+**User:** "Update the release page at https://your-org.atlassian.net/wiki/spaces/ENG/pages/987654/v2.5+Release+Notes with these new items: ..."
 
 Agent:
 1. Confirms credentials are set
@@ -296,7 +308,7 @@ Agent:
 5. Shows the draft for approval
 6. Runs `hurl create-page.hurl` with the space ID and content
 
-**User:** "Address the comments on https://sygnum.atlassian.net/wiki/spaces/ENG/pages/987654/v2.5+Release+Notes"
+**User:** "Address the comments on https://your-org.atlassian.net/wiki/spaces/ENG/pages/987654/v2.5+Release+Notes"
 
 Agent:
 1. Confirms credentials

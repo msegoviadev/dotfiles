@@ -6,6 +6,7 @@ Content-Type: application/json
 
 {
   "id": "{{page_id}}",
+  "status": "current",
   "title": "{{title}}",
   "version": {
     "number": {{version}},
