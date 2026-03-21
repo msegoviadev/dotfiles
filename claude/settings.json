@@ -47,18 +47,20 @@
       "Bash(test:*)",
       "Read(~/workspace/****)",
       "Read(~/.claude/CLAUDE.md)",
+      "Read(~/.claude/skills/**)",
       "Read(.ai/****)",
       "Read(.claude/**)",
-      "mcp__serena__find_file",
-      "mcp__serena__read_file",
-      "mcp__serena__replace_content",
       "Search(*)",
       "Edit(.ai/**)",
       "Update(.ai/**)",
       "Edit(~/workspace/**)",
       "Update(~/workspace/**)",
       "Write(.ai/**)",
-      "Write(~/workspace/**)"
+      "Write(~/workspace/**)",
+      "Bash(jira issue view:*)",
+      "Bash(hurl:*)",
+      "Bash(glab auth status:*)",
+      "Bash(glab mr diff:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -86,12 +88,6 @@
       "WebSearch"
     ]
   },
-  "enabledMcpjsonServers": [],
-  "enabledPlugins": {},
-  "sandbox": {
-    "enabled": false,
-    "autoAllowBashIfSandboxed": true
-  },
   "hooks": {
     "PreToolUse": [
       {
@@ -100,9 +96,19 @@
           {
             "type": "command",
             "command": "~/.claude/hooks/rtk-rewrite.sh"
+          },
+          {
+            "type": "command",
+            "command": "~/workspace/dotfiles/claude/hooks/allow-hurl.sh"
           }
         ]
       }
     ]
+  },
+  "enabledMcpjsonServers": [],
+  "enabledPlugins": {},
+  "sandbox": {
+    "enabled": false,
+    "autoAllowBashIfSandboxed": true
   }
 }
