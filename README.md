@@ -17,8 +17,10 @@ git clone <your-repo-url> ~/workspace/dotfiles
 **Claude**
 
 ```bash
-ln -s ~/workspace/dotfiles/claude/settings.json ~/.claude/settings.json
 ln -s ~/workspace/dotfiles/claude/CLAUDE.md ~/.claude/CLAUDE.md
+ln -s ~/workspace/dotfiles/claude/RTK.md ~/.claude/RTK.md
+ln -s ~/workspace/dotfiles/claude/hooks ~/.claude/hooks
+ln -s ~/workspace/dotfiles/claude/settings.json ~/.claude/settings.json
 ```
 
 **Ghostty**
