@@ -60,7 +60,8 @@
       "Bash(jira issue view:*)",
       "Bash(hurl:*)",
       "Bash(glab auth status:*)",
-      "Bash(glab mr diff:*)"
+      "Bash(glab mr diff:*)",
+      "Bash(rtk:*)"
     ],
     "deny": [
       "Bash(rm -rf:*)",
@@ -99,7 +100,7 @@
           },
           {
             "type": "command",
-            "command": "~/workspace/dotfiles/claude/hooks/allow-hurl.sh"
+            "command": "~/.claude/hooks/allow-hurl.sh"
           }
         ]
       }
