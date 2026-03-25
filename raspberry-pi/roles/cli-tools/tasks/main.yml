@@ -144,6 +144,30 @@
   changed_when: false
   failed_when: false
 
+# ============================================
+# Install rtk (RTK - Rust Token Killer)
+# ============================================
+
+- name: Check if rtk is already installed
+  stat:
+    path: "{{ home_dir }}/.local/bin/rtk"
+  register: rtk_stat
+
+- name: Install rtk via quick install script
+  shell: |
+    curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when: not rtk_stat.stat.exists
+
+- name: Verify rtk installation
+  command: "{{ home_dir }}/.local/bin/rtk --version"
+  register: rtk_version_check
+  changed_when: false
+  failed_when: false
+
 - name: Display CLI tools installation summary
   debug:
     msg: |

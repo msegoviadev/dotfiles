@@ -239,18 +239,18 @@
     mode: '0644'
   tags: ['opencode', 'opencode-config']
 
-- name: Sync skill directory
+- name: Sync skills directory
   copy:
-    src: "{{ playbook_dir }}/../opencode/skill/"
-    dest: "{{ home_dir }}/.config/opencode/skill/"
+    src: "{{ playbook_dir }}/../opencode/skills/"
+    dest: "{{ home_dir }}/.config/opencode/skills/"
     mode: '0644'
     directory_mode: '0755'
   tags: ['opencode', 'opencode-config']
 
-- name: Sync plugin directory
+- name: Sync plugins directory
   copy:
-    src: "{{ playbook_dir }}/../opencode/plugin/"
-    dest: "{{ home_dir }}/.config/opencode/plugin/"
+    src: "{{ playbook_dir }}/../opencode/plugins/"
+    dest: "{{ home_dir }}/.config/opencode/plugins/"
     mode: '0644'
     directory_mode: '0755'
   tags: ['opencode', 'opencode-config']
