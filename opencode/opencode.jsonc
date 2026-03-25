@@ -57,6 +57,7 @@
       "touch *": "allow",
       "npx playwright test": "allow",
       "npx playwright test *": "allow",
+      "rtk *": "allow",
       "glab *": "allow",
       "git push": "ask",
       "git push *": "ask",
