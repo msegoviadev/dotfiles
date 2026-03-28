@@ -13,16 +13,15 @@ background-opacity = 0.85
 background-blur = true
 
 # Minimal padding (2-4px is super small)
-window-padding-x = 5
+window-padding-x = 10
 window-padding-y = 5
 
 # Minimal window setup (removes title bar decorations)
 window-decoration = false
 macos-titlebar-style = hidden
 
-# Window size (comfortable for coding with splits)
-window-width = 171
-window-height = 50
+# Open new windows maximized
+maximize = true
 
 # Save window state so manual resizes persist
 window-save-state = always
