@@ -40,3 +40,13 @@ ln -s ~/workspace/dotfiles/nvim ~/.config/nvim
 ```bash
 ln -s ~/workspace/dotfiles/opencode ~/.config/opencode
 ```
+
+**RTK**
+
+```bash
+# macOS
+ln -s ~/workspace/dotfiles/rtk/config.toml ~/Library/Application\ Support/rtk/config.toml
+
+# Linux
+ln -s ~/workspace/dotfiles/rtk/config.toml ~/.config/rtk/config.toml
+```
