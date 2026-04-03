@@ -27,6 +27,7 @@ EXTENSIONS=(
     "rs"
     "go" "gohtml"
     "c" "h" "cpp" "hpp" "cc" "hh" "cxx" "hxx"
+    "mind"
 )
 
 echo "==================================="
@@ -53,10 +54,15 @@ fi
 
 # Register each extension
 success_count=0
+skip_count=0
 fail_count=0
 
 for ext in "${EXTENSIONS[@]}"; do
-    if duti -s "$BUNDLE_ID" ".$ext" all 2>&1; then
+    current=$(duti -x ".$ext" 2>/dev/null | sed -n '3p')
+    if [ "$current" = "$BUNDLE_ID" ]; then
+        echo "○ .$ext (already set)"
+        ((skip_count++))
+    elif duti -s "$BUNDLE_ID" ".$ext" all 2>&1; then
         echo "✓ .$ext"
         ((success_count++))
     else
@@ -69,6 +75,7 @@ echo ""
 echo "==================================="
 echo "Results"
 echo "==================================="
+echo "○ Skipped: $skip_count"
 echo "✓ Success: $success_count"
 echo "✗ Failed: $fail_count"
 echo ""
