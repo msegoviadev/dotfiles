@@ -7,7 +7,7 @@ return {
   },
   build = ':TSUpdate',
   config = function()
-    local parsers = { "vim", "vimdoc", "lua", "java", "javascript", "typescript", "html", "css", "json", "tsx", "markdown", "markdown_inline", "gitignore", "python", "terraform", "hcl" }
+    local parsers = { "vim", "vimdoc", "lua", "java", "javascript", "typescript", "html", "css", "json", "tsx", "markdown", "markdown_inline", "gitignore", "python", "terraform", "hcl", "yaml" }
 
     require("nvim-treesitter").setup({
       highlight = { enable = true },
@@ -75,6 +75,18 @@ return {
         vim.keymap.set("n", "M", safe_move(move.goto_previous_start, "@block.outer", "textobjects"), vim.tbl_extend("force", buf, { desc = "Previous [B]lock" }))
         vim.keymap.set({ "x", "o" }, "ab", function() select.select_textobject("@block.outer", "textobjects") end, vim.tbl_extend("force", buf, { desc = "[A]round [B]lock" }))
         vim.keymap.set({ "x", "o" }, "ib", function() select.select_textobject("@block.inner", "textobjects") end, vim.tbl_extend("force", buf, { desc = "[I]nner [B]lock" }))
+      end,
+    })
+
+    -- Markdown: m/M jump between headings, ah/ih select around/inner heading
+    vim.api.nvim_create_autocmd("FileType", {
+      pattern = { "markdown", "markdown.mdx" },
+      callback = function()
+        local buf = { buffer = 0 }
+        vim.keymap.set("n", "m", safe_move(move.goto_next_start, "@heading.outer", "textobjects"), vim.tbl_extend("force", buf, { desc = "Next [H]eading" }))
+        vim.keymap.set("n", "M", safe_move(move.goto_previous_start, "@heading.outer", "textobjects"), vim.tbl_extend("force", buf, { desc = "Previous [H]eading" }))
+        vim.keymap.set({ "x", "o" }, "ah", function() select.select_textobject("@heading.outer", "textobjects") end, vim.tbl_extend("force", buf, { desc = "[A]round [H]eading" }))
+        vim.keymap.set({ "x", "o" }, "ih", function() select.select_textobject("@heading.inner", "textobjects") end, vim.tbl_extend("force", buf, { desc = "[I]nner [H]eading" }))
       end,
     })
 

@@ -16,7 +16,7 @@ return {
     dependencies = { "williamboman/mason.nvim" },
     config = function()
       require("mason-lspconfig").setup({
-        ensure_installed = { "lua_ls", "pyright", "ts_ls", "jsonls", "terraformls" },
+        ensure_installed = { "lua_ls", "pyright", "ts_ls", "jsonls", "terraformls", "yamlls", "marksman" },
       })
     end,
   },
@@ -112,20 +112,59 @@ return {
         root_markers = { ".terraform", ".git" },
       }
 
+      vim.lsp.config.yamlls = {
+        cmd = { "yaml-language-server", "--stdio" },
+        filetypes = { "yaml", "yaml.docker-compose" },
+        root_markers = { ".git" },
+        settings = {
+          yaml = {
+            schemas = require("schemastore").yaml.schemas(),
+            validate = true,
+            hover = true,
+            completion = true,
+            customTags = {
+              "!reference sequence",
+            },
+          },
+        },
+      }
+
+      vim.lsp.config.marksman = {
+        cmd = { "marksman", "server" },
+        filetypes = { "markdown", "markdown.mdx" },
+        root_markers = { ".git", ".marksman.toml" },
+      }
+
       -- Enable LSP servers
       vim.lsp.enable('pyright')
       vim.lsp.enable('ts_ls')
       vim.lsp.enable('lua_ls')
       vim.lsp.enable('jsonls')
       vim.lsp.enable('terraformls')
+      vim.lsp.enable('yamlls')
+      vim.lsp.enable('marksman')
 
       -- LSP keymaps
       vim.api.nvim_create_autocmd("LspAttach", {
         group = vim.api.nvim_create_augroup("UserLspConfig", {}),
         callback = function(ev)
           local opts = { buffer = ev.buf, desc = "" }
+
+          -- Navigation
           vim.keymap.set("n", "gd", vim.lsp.buf.definition,
             vim.tbl_extend("force", opts, { desc = "[G]oto [D]efinition" }))
+          vim.keymap.set("n", "gD", vim.lsp.buf.declaration,
+            vim.tbl_extend("force", opts, { desc = "[G]oto [D]eclaration" }))
+          vim.keymap.set("n", "gi", function()
+            require("telescope.builtin").lsp_implementations({
+              show_line = false,
+            })
+          end, vim.tbl_extend("force", opts, { desc = "[G]oto [I]mplementation" }))
+          vim.keymap.set("n", "gy", function()
+            require("telescope.builtin").lsp_type_definitions({
+              show_line = false,
+            })
+          end, vim.tbl_extend("force", opts, { desc = "[G]oto T[y]pe Definition" }))
           vim.keymap.set("n", "gr", function()
             require("telescope.builtin").lsp_references({
               show_line = false,
@@ -140,7 +179,42 @@ return {
               },
             })
           end, vim.tbl_extend("force", opts, { desc = "[G]oto [R]eferences" }))
-          vim.keymap.set("n", "<leader>l", vim.lsp.buf.format, vim.tbl_extend("force", opts, { desc = "[L]SP Format" }))
+
+          -- Hover and signature help
+          vim.keymap.set("n", "K", vim.lsp.buf.hover,
+            vim.tbl_extend("force", opts, { desc = "Hover Documentation" }))
+          vim.keymap.set({ "n", "i" }, "<C-k>", vim.lsp.buf.signature_help,
+            vim.tbl_extend("force", opts, { desc = "Signature Help" }))
+
+          -- Code actions and refactoring
+          vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action,
+            vim.tbl_extend("force", opts, { desc = "[C]ode [A]ction" }))
+          vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename,
+            vim.tbl_extend("force", opts, { desc = "[R]e[n]ame Symbol" }))
+
+          -- Formatting
+          vim.keymap.set("n", "<leader>l", vim.lsp.buf.format,
+            vim.tbl_extend("force", opts, { desc = "[L]SP Format" }))
+
+          -- Document and workspace symbols
+          vim.keymap.set("n", "<leader>ss", function()
+            require("telescope.builtin").lsp_document_symbols({
+              show_line = false,
+            })
+          end, vim.tbl_extend("force", opts, { desc = "[S]earch Document [S]ymbols" }))
+          vim.keymap.set("n", "<leader>sS", function()
+            require("telescope.builtin").lsp_workspace_symbols({
+              show_line = false,
+            })
+          end, vim.tbl_extend("force", opts, { desc = "[S]earch Workspace [S]ymbols" }))
+
+          -- Call hierarchy
+          vim.keymap.set("n", "<leader>ci", function()
+            vim.lsp.buf.incoming_calls()
+          end, vim.tbl_extend("force", opts, { desc = "[C]all Hierarchy [I]ncoming" }))
+          vim.keymap.set("n", "<leader>co", function()
+            vim.lsp.buf.outgoing_calls()
+          end, vim.tbl_extend("force", opts, { desc = "[C]all Hierarchy [O]utgoing" }))
         end,
       })
     end,
