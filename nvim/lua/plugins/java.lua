@@ -10,6 +10,14 @@ return {
       },
     },
     config = function()
+      -- ~/.cache/nvim has com.apple.provenance (macOS Sequoia) which makes it
+      -- non-writable for child processes like jdtls. Redirect to stdpath('data').
+      local lsp_utils = require('java-core.utils.lsp')
+      local jdtls_data_root = vim.fn.stdpath('data') .. '/jdtls'
+      lsp_utils.get_jdtls_cache_root_path = function()
+        return jdtls_data_root
+      end
+
       -- Configure nvim-java with optimized settings
       require('java').setup({
         checks = {
@@ -142,7 +150,7 @@ return {
 
       -- Clear JDTLS workspace and restart
       local function clear_workspace_and_restart()
-        local workspace_path = vim.fn.expand('~/.cache/jdtls/')
+        local workspace_path = vim.fn.stdpath('data') .. '/jdtls/'
         vim.notify('🧹 Clearing JDTLS workspace...', vim.log.levels.WARN)
 
         -- Stop JDTLS
