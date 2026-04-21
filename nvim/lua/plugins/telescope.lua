@@ -562,6 +562,7 @@ return {
         },
         pickers = {
           live_grep = {
+            path_display = { "relative" },
             layout_strategy = "vertical",
             layout_config = {
               height = 0.95,
@@ -571,6 +572,7 @@ return {
           },
 
           grep_string = {
+            path_display = { "relative" },
             layout_strategy = "vertical",
             layout_config = {
               height = 0.95,
