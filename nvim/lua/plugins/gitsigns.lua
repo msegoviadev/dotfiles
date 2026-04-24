@@ -65,11 +65,15 @@ return {
         -- Reset (revert) hunk under cursor to match git index
         vim.keymap.set("n", "<leader>hr", gitsigns.reset_hunk, { buffer = bufnr, desc = "[H]unk [R]eset" })
 
-        -- Navigate to next hunk
-        vim.keymap.set("n", "<leader>hn", gitsigns.next_hunk, { buffer = bufnr, desc = "[H]unk [N]ext" })
+        -- Navigate to next hunk (both staged and unstaged)
+        vim.keymap.set("n", "<leader>hn", function()
+          gitsigns.nav_hunk("next", { target = "all" })
+        end, { buffer = bufnr, desc = "[H]unk [N]ext" })
 
-        -- Navigate to previous hunk
-        vim.keymap.set("n", "<leader>hN", gitsigns.prev_hunk, { buffer = bufnr, desc = "[H]unk [P]revious" })
+        -- Navigate to previous hunk (both staged and unstaged)
+        vim.keymap.set("n", "<leader>hN", function()
+          gitsigns.nav_hunk("prev", { target = "all" })
+        end, { buffer = bufnr, desc = "[H]unk [P]revious" })
       end,
     })
   end,
