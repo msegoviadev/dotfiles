@@ -78,3 +78,79 @@
       - Plugins: {{ zsh_plugins | length }} enabled
       - Prompt icon: {{ zsh_prompt_icon }}
       - History: {{ zsh_histsize }} commands
+
+# ============================================
+# Update: Oh My Zsh
+# ============================================
+
+- name: Update Oh My Zsh
+  shell: |
+    ZSH={{ home_dir }}/.oh-my-zsh {{ home_dir }}/.oh-my-zsh/tools/upgrade.sh
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  register: ohmyzsh_update_result
+  changed_when: "'Updated' in ohmyzsh_update_result.stdout or 'upgraded' in ohmyzsh_update_result.stdout"
+  failed_when: false
+  tags: ['zsh', 'zsh-update', 'update']
+
+- name: Display Oh My Zsh update result
+  debug:
+    msg: "{{ ohmyzsh_update_result.stdout if ohmyzsh_update_result.stdout else 'Oh My Zsh update check completed' }}"
+  when: ohmyzsh_update_result is defined
+  tags: ['zsh', 'zsh-update', 'update']
+
+# ============================================
+# Update: zsh-autosuggestions
+# ============================================
+
+- name: Update zsh-autosuggestions plugin
+  git:
+    repo: https://github.com/zsh-users/zsh-autosuggestions
+    dest: "{{ home_dir }}/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+    update: yes
+    version: master
+  register: autosuggestions_update_result
+  tags: ['zsh', 'zsh-update', 'update']
+
+- name: Display zsh-autosuggestions update result
+  debug:
+    msg: "zsh-autosuggestions {{ 'Updated' if autosuggestions_update_result.changed else 'Already up to date' }}"
+  tags: ['zsh', 'zsh-update', 'update']
+
+# ============================================
+# Update: zsh-syntax-highlighting
+# ============================================
+
+- name: Update zsh-syntax-highlighting plugin
+  git:
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+    dest: "{{ home_dir }}/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting"
+    update: yes
+    version: master
+  register: syntax_highlighting_update_result
+  tags: ['zsh', 'zsh-update', 'update']
+
+- name: Display zsh-syntax-highlighting update result
+  debug:
+    msg: "zsh-syntax-highlighting {{ 'Updated' if syntax_highlighting_update_result.changed else 'Already up to date' }}"
+  tags: ['zsh', 'zsh-update', 'update']
+
+# ============================================
+# Update Summary
+# ============================================
+
+- name: Display Zsh update summary
+  debug:
+    msg: |
+      ============================================
+      Zsh Update Summary
+      ============================================
+      
+      Oh My Zsh:           {{ ohmyzsh_update_result is changed | ternary('Updated', 'Up to date') }}
+      autosuggestions:     {{ autosuggestions_update_result is changed | ternary('Updated', 'Up to date') }}
+      syntax-highlighting:  {{ syntax_highlighting_update_result is changed | ternary('Updated', 'Up to date') }}
+      
+      ============================================
+  tags: ['zsh', 'zsh-update', 'update']

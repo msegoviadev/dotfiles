@@ -178,3 +178,540 @@
       - jq: {{ 'installed' if ansible_facts.packages['jq'] is defined else 'not found' }}
       - yq: {{ yq_version_check.stdout if yq_version_check.rc == 0 else 'installation failed' }}
       - ast-grep: {{ astgrep_version_check.stdout if astgrep_version_check.rc == 0 else 'installation failed' }}
+
+# ============================================
+# Update: nvm
+# ============================================
+
+- name: Get current nvm version
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && nvm --version
+  args:
+    executable: /bin/bash
+  register: nvm_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get latest nvm version from GitHub
+  uri:
+    url: https://api.github.com/repos/nvm-sh/nvm/releases/latest
+    return_content: yes
+  register: nvm_github_release
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Set nvm latest version fact
+  set_fact:
+    nvm_latest_version: "{{ nvm_github_release.json.tag_name | regex_replace('^v', '') }}"
+  when: nvm_github_release.json is defined and nvm_github_release.json.tag_name is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display nvm version comparison
+  debug:
+    msg: |
+      Current nvm: v{{ nvm_current_version.stdout | default('not installed') }}
+      Latest nvm: v{{ nvm_latest_version | default('unknown') }}
+      Update needed: {{ nvm_current_version.stdout != nvm_latest_version }}
+  when: nvm_current_version.stdout is defined and nvm_latest_version is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Update nvm
+  shell: |
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v{{ nvm_latest_version }}/install.sh | bash
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when:
+    - nvm_current_version.stdout is defined
+    - nvm_latest_version is defined
+    - nvm_current_version.stdout != nvm_latest_version
+  register: nvm_update_result
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Verify nvm version after update
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && nvm --version
+  args:
+    executable: /bin/bash
+  register: nvm_updated_version
+  changed_when: false
+  when: nvm_update_result is changed
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display nvm update result
+  debug:
+    msg: |
+      {% if nvm_update_result is changed %}
+      nvm updated: v{{ nvm_current_version.stdout }} -> v{{ nvm_updated_version.stdout }}
+      {% else %}
+      nvm already up to date: v{{ nvm_current_version.stdout }}
+      {% endif %}
+  when: nvm_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+# ============================================
+# Update: Node.js LTS
+# ============================================
+
+- name: Get current Node.js version
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && node --version
+  args:
+    executable: /bin/bash
+  register: node_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get latest available Node.js LTS version
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && nvm ls-remote --lts | tail -n 1 | awk '{print $1}' | sed 's/^->//;s/^[[:space:]]*//' | tr -d '[:blank:]'
+  args:
+    executable: /bin/bash
+  register: node_latest_lts
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Clean Node.js LTS version string
+  set_fact:
+    node_latest_lts_version: "{{ node_latest_lts.stdout | regex_replace('^->\\s*', '') | trim }}"
+  when: node_latest_lts.stdout is defined and node_latest_lts.stdout != ''
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display Node.js version comparison
+  debug:
+    msg: |
+      Current Node.js: {{ node_current_version.stdout | default('not installed') }}
+      Latest LTS: {{ node_latest_lts_version | default('unknown') }}
+      Update needed: {{ node_current_version.stdout != node_latest_lts_version }}
+  when: node_current_version.stdout is defined and node_latest_lts_version is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Install latest Node.js LTS
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && nvm install {{ node_latest_lts_version }} && nvm alias default {{ node_latest_lts_version }}
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when:
+    - node_current_version.stdout is defined
+    - node_latest_lts_version is defined
+    - node_current_version.stdout != node_latest_lts_version
+  register: node_update_result
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Uninstall previous Node.js version after upgrade
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && nvm uninstall {{ node_current_version.stdout }}
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when:
+    - node_update_result is changed
+    - node_current_version.stdout is defined
+    - node_current_version.stdout != ''
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Reinstall global npm packages after Node.js update
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && npm install -g opencode-ai
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when: node_update_result is changed
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Verify Node.js version after update
+  shell: |
+    . {{ home_dir }}/.nvm/nvm.sh && node --version
+  args:
+    executable: /bin/bash
+  register: node_updated_version
+  changed_when: false
+  when: node_update_result is changed
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display Node.js update result
+  debug:
+    msg: |
+      {% if node_update_result is changed %}
+      Node.js updated: {{ node_current_version.stdout }} -> {{ node_updated_version.stdout }}
+      {% else %}
+      Node.js already up to date: {{ node_current_version.stdout }}
+      {% endif %}
+  when: node_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+# ============================================
+# Update: yq
+# ============================================
+
+- name: Get current yq version
+  command: /usr/local/bin/yq --version
+  register: yq_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get latest yq version from GitHub
+  uri:
+    url: https://api.github.com/repos/mikefarah/yq/releases/latest
+    return_content: yes
+  register: yq_github_release
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Set yq latest version fact
+  set_fact:
+    yq_latest_version: "{{ yq_github_release.json.tag_name | regex_replace('^v', '') }}"
+  when: yq_github_release.json is defined and yq_github_release.json.tag_name is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract current yq version number
+  set_fact:
+    yq_current_version_number: "{{ yq_current_version.stdout | regex_search('(\\d+\\.\\d+\\.\\d+)') }}"
+  when: yq_current_version.rc == 0 and yq_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display yq version comparison
+  debug:
+    msg: |
+      Current yq: {{ yq_current_version_number | default('not installed') }}
+      Latest yq: {{ yq_latest_version | default('unknown') }}
+      Update needed: {{ yq_current_version_number != yq_latest_version }}
+  when: yq_current_version_number is defined and yq_latest_version is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Update yq binary
+  get_url:
+    url: "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64"
+    dest: /usr/local/bin/yq
+    mode: '0755'
+    owner: root
+    group: root
+  become: yes
+  when:
+    - yq_current_version_number is defined
+    - yq_latest_version is defined
+    - yq_current_version_number != yq_latest_version
+  register: yq_update_result
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Verify yq version after update
+  command: /usr/local/bin/yq --version
+  register: yq_updated_version
+  changed_when: false
+  when: yq_update_result is changed
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display yq update result
+  debug:
+    msg: |
+      {% if yq_update_result is changed %}
+      yq updated: {{ yq_current_version_number }} -> {{ yq_updated_version.stdout }}
+      {% else %}
+      yq already up to date: {{ yq_current_version_number | default('unknown') }}
+      {% endif %}
+  when: yq_current_version_number is defined
+  tags: ['cli', 'cli-update', 'update']
+
+# ============================================
+# Update: ast-grep
+# ============================================
+
+- name: Get current ast-grep version
+  command: /usr/local/bin/ast-grep --version
+  register: astgrep_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get latest ast-grep version from GitHub
+  uri:
+    url: https://api.github.com/repos/ast-grep/ast-grep/releases/latest
+    return_content: yes
+  register: astgrep_github_release
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Set ast-grep latest version fact
+  set_fact:
+    astgrep_latest_version: "{{ astgrep_github_release.json.tag_name | regex_replace('^v', '') }}"
+  when: astgrep_github_release.json is defined and astgrep_github_release.json.tag_name is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract current ast-grep version number
+  set_fact:
+    astgrep_current_version_number: "{{ astgrep_current_version.stdout | regex_search('(\\d+\\.\\d+\\.\\d+)') }}"
+  when: astgrep_current_version.rc == 0 and astgrep_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display ast-grep version comparison
+  debug:
+    msg: |
+      Current ast-grep: {{ astgrep_current_version_number | default('not installed') }}
+      Latest ast-grep: {{ astgrep_latest_version | default('unknown') }}
+      Update needed: {{ astgrep_current_version_number != astgrep_latest_version }}
+  when: astgrep_current_version_number is defined and astgrep_latest_version is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Create temporary directory for ast-grep update
+  tempfile:
+    state: directory
+    suffix: astgrep-update
+  register: astgrep_update_temp
+  when:
+    - astgrep_current_version_number is defined
+    - astgrep_latest_version is defined
+    - astgrep_current_version_number != astgrep_latest_version
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Download ast-grep archive (ARM64)
+  get_url:
+    url: "https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-aarch64-unknown-linux-gnu.zip"
+    dest: "{{ astgrep_update_temp.path }}/ast-grep.zip"
+    mode: '0644'
+  when:
+    - astgrep_current_version_number is defined
+    - astgrep_latest_version is defined
+    - astgrep_current_version_number != astgrep_latest_version
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract ast-grep archive
+  unarchive:
+    src: "{{ astgrep_update_temp.path }}/ast-grep.zip"
+    dest: "{{ astgrep_update_temp.path }}"
+    remote_src: yes
+  when:
+    - astgrep_current_version_number is defined
+    - astgrep_latest_version is defined
+    - astgrep_current_version_number != astgrep_latest_version
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Find ast-grep binary in extracted files
+  find:
+    paths: "{{ astgrep_update_temp.path }}"
+    patterns: "ast-grep"
+    recurse: yes
+    file_type: file
+  register: astgrep_update_binary
+  when:
+    - astgrep_current_version_number is defined
+    - astgrep_latest_version is defined
+    - astgrep_current_version_number != astgrep_latest_version
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Replace ast-grep binary
+  copy:
+    src: "{{ astgrep_update_binary.files[0].path }}"
+    dest: /usr/local/bin/ast-grep
+    mode: '0755'
+    owner: root
+    group: root
+    remote_src: yes
+  become: yes
+  when:
+    - astgrep_current_version_number is defined
+    - astgrep_latest_version is defined
+    - astgrep_current_version_number != astgrep_latest_version
+    - astgrep_update_binary.files | length > 0
+  register: astgrep_update_result
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Clean up ast-grep temporary directory
+  file:
+    path: "{{ astgrep_update_temp.path }}"
+    state: absent
+  when: astgrep_update_temp.path is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Verify ast-grep version after update
+  command: /usr/local/bin/ast-grep --version
+  register: astgrep_updated_version
+  changed_when: false
+  when: astgrep_update_result is changed
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display ast-grep update result
+  debug:
+    msg: |
+      {% if astgrep_update_result is defined and astgrep_update_result is changed %}
+      ast-grep updated: {{ astgrep_current_version_number }} -> {{ astgrep_updated_version.stdout }}
+      {% else %}
+      ast-grep already up to date: {{ astgrep_current_version_number | default('unknown') }}
+      {% endif %}
+  when: astgrep_current_version_number is defined
+  tags: ['cli', 'cli-update', 'update']
+
+# ============================================
+# Update: rtk
+# ============================================
+
+- name: Get current rtk version
+  command: "{{ home_dir }}/.local/bin/rtk --version"
+  register: rtk_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get latest rtk version from GitHub
+  uri:
+    url: https://api.github.com/repos/rtk-ai/rtk/releases/latest
+    return_content: yes
+  register: rtk_github_release
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Set rtk latest version fact
+  set_fact:
+    rtk_latest_version: "{{ rtk_github_release.json.tag_name | regex_replace('^v', '') }}"
+  when: rtk_github_release.json is defined and rtk_github_release.json.tag_name is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract current rtk version number
+  set_fact:
+    rtk_current_version_number: "{{ rtk_current_version.stdout | regex_search('(\\d+\\.\\d+\\.\\d+)') }}"
+  when: rtk_current_version.rc == 0 and rtk_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display rtk version comparison
+  debug:
+    msg: |
+      Current rtk: {{ rtk_current_version_number | default('not installed') }}
+      Latest rtk: {{ rtk_latest_version | default('unknown') }}
+      Update needed: {{ rtk_current_version_number != rtk_latest_version }}
+  when: rtk_current_version_number is defined and rtk_latest_version is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Update rtk via install script
+  shell: |
+    curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
+  args:
+    executable: /bin/bash
+  environment:
+    HOME: "{{ home_dir }}"
+  when:
+    - rtk_current_version_number is defined
+    - rtk_latest_version is defined
+    - rtk_current_version_number != rtk_latest_version
+  register: rtk_update_result
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Verify rtk version after update
+  command: "{{ home_dir }}/.local/bin/rtk --version"
+  register: rtk_updated_version
+  changed_when: false
+  when: rtk_update_result is changed
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display rtk update result
+  debug:
+    msg: |
+      {% if rtk_update_result is changed %}
+      rtk updated: {{ rtk_current_version_number }} -> {{ rtk_updated_version.stdout }}
+      {% else %}
+      rtk already up to date: {{ rtk_current_version_number | default('unknown') }}
+      {% endif %}
+  when: rtk_current_version_number is defined
+  tags: ['cli', 'cli-update', 'update']
+
+# ============================================
+# Update: ripgrep, jq, fd, bat (via apt)
+# ============================================
+
+- name: Get current ripgrep version
+  command: rg --version
+  register: rg_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract ripgrep version number
+  set_fact:
+    rg_current_version_number: "{{ rg_current_version.stdout | regex_search('(\\d+\\.\\d+\\.\\d+)') }}"
+  when: rg_current_version.rc == 0 and rg_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get current jq version
+  command: jq --version
+  register: jq_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract jq version number
+  set_fact:
+    jq_current_version_number: "{{ jq_current_version.stdout | regex_replace('^jq-', '') }}"
+  when: jq_current_version.rc == 0 and jq_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get current fd version
+  command: fdfind --version
+  register: fd_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract fd version number
+  set_fact:
+    fd_current_version_number: "{{ fd_current_version.stdout | regex_search('(\\d+\\.\\d+\\.\\d+)') }}"
+  when: fd_current_version.rc == 0 and fd_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Get current bat version
+  command: batcat --version
+  register: bat_current_version
+  changed_when: false
+  failed_when: false
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Extract bat version number
+  set_fact:
+    bat_current_version_number: "{{ bat_current_version.stdout | regex_search('(\\d+\\.\\d+\\.\\d+)') }}"
+  when: bat_current_version.rc == 0 and bat_current_version.stdout is defined
+  tags: ['cli', 'cli-update', 'update']
+
+- name: Display apt-managed tool versions
+  debug:
+    msg: |
+      apt-managed tools (updated via apt upgrade --tags update):
+        ripgrep: {{ rg_current_version_number | default('not installed') }}
+        jq:      {{ jq_current_version_number | default('not installed') }}
+        fd:      {{ fd_current_version_number | default('not installed') }}
+        bat:     {{ bat_current_version_number | default('not installed') }}
+  tags: ['cli', 'cli-update', 'update']
+
+# ============================================
+# Update Summary
+# ============================================
+
+- name: Display CLI tools update summary
+  debug:
+    msg: |
+      ============================================
+      CLI Tools Update Summary
+      ============================================
+      
+      nvm:  {{ nvm_update_result is changed | ternary('Updated', 'Up to date') }}
+      Node: {{ node_update_result is changed | ternary('Updated', 'Up to date') }}
+      rg:   {{ rg_current_version_number | default('not installed') }} (apt)
+      jq:   {{ jq_current_version_number | default('not installed') }} (apt)
+      fd:   {{ fd_current_version_number | default('not installed') }} (apt)
+      bat:  {{ bat_current_version_number | default('not installed') }} (apt)
+      yq:   {{ yq_update_result is changed | ternary('Updated', 'Up to date') }}
+      ag:   {{ astgrep_update_result is changed | ternary('Updated', 'Up to date') }}
+      rtk:  {{ rtk_update_result is changed | ternary('Updated', 'Up to date') }}
+      
+      ============================================
+  tags: ['cli', 'cli-update', 'update']

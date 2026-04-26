@@ -174,3 +174,72 @@
       {% endif %}
       
       ============================================
+
+# ============================================
+# Task 6: Update Tailscale
+# ============================================
+
+- name: Get current Tailscale version
+  command: tailscale version
+  register: tailscale_version_before
+  changed_when: false
+  failed_when: false
+  tags: ['tailscale', 'tailscale-update', 'update']
+
+- name: Set current Tailscale version fact
+  set_fact:
+    tailscale_version_before_str: "{{ tailscale_version_before.stdout_lines[0] | default('unknown') }}"
+  when: tailscale_version_before.rc | default(1) == 0
+  tags: ['tailscale', 'tailscale-update', 'update']
+
+- name: Update Tailscale to latest stable
+  command: tailscale update --yes
+  become: yes
+  register: tailscale_update_result
+  failed_when: false
+  tags: ['tailscale', 'tailscale-update', 'update']
+
+- name: Get Tailscale version after update
+  command: tailscale version
+  register: tailscale_version_after
+  changed_when: false
+  failed_when: false
+  tags: ['tailscale', 'tailscale-update', 'update']
+
+- name: Set Tailscale version after and update fact
+  set_fact:
+    tailscale_version_after_str: "{{ tailscale_version_after.stdout_lines[0] | default('unknown') }}"
+    tailscale_was_updated: "{{ (tailscale_version_before.stdout_lines[0] | default('')) != (tailscale_version_after.stdout_lines[0] | default('')) and tailscale_version_before.rc | default(1) == 0 and tailscale_version_after.rc | default(1) == 0 }}"
+  tags: ['tailscale', 'tailscale-update', 'update']
+
+- name: Restart Tailscale Serve service after update
+  systemd:
+    name: tailscale-serve
+    state: restarted
+  become: yes
+  when: tailscale_was_updated | bool
+  tags: ['tailscale', 'tailscale-update', 'update']
+
+- name: Display Tailscale update result
+  debug:
+    msg: |
+      {% if tailscale_was_updated | bool %}
+      ============================================
+      Tailscale Updated Successfully!
+      ============================================
+      
+      Previous version: {{ tailscale_version_before_str | default('unknown') }}
+      New version: {{ tailscale_version_after_str | default('unknown') }}
+      
+      Tailscale Serve restarted to apply changes.
+      ============================================
+      {% else %}
+      ============================================
+      Tailscale Already Up to Date
+      ============================================
+      
+      Current version: {{ tailscale_version_before_str | default('unknown') }}
+      No update available.
+      ============================================
+      {% endif %}
+  tags: ['tailscale', 'tailscale-update', 'update']

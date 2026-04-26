@@ -16,7 +16,7 @@
   roles:
     - role: system-prep
       become: yes
-      tags: ['system', 'update', 'prep']
+      tags: ['system', 'prep']
 
     - role: zsh
       become: no

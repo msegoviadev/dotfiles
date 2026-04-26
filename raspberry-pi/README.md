@@ -69,13 +69,19 @@ init.defaultBranch = main
 ## Available Tags
 
 ```bash
-system, update, prep    # System configuration
+system, prep             # System configuration
+update                   # Update everything (system packages, zsh, cli-tools, tailscale, opencode)
 zsh, shell              # Shell environment
-tools, cli              # CLI tools
+tools, cli              # CLI tools installation
 git, config             # Git configuration
 tailscale, vpn          # Tailscale VPN + HTTPS
-opencode, server        # OpenCode server
+opencode, server        # OpenCode server (full install)
+
+# Update-specific tags (only update tasks, no install/setup)
 opencode-update         # Check/update OpenCode version
+tailscale-update        # Check/update Tailscale version
+cli-update              # Update CLI tools (nvm, node, yq, ast-grep, rtk)
+zsh-update              # Update Oh My Zsh + plugins
 verify                  # Post-deployment verification
 ```
 
@@ -153,11 +159,14 @@ Host-specific config: Create `host_vars/neo2.yml` with overrides
 ## Maintenance
 
 ```bash
-# Update system packages
+# Update everything (system packages + all software)
 ansible-playbook playbook.yml --tags update
 
-# Update OpenCode
+# Update individual components
 ansible-playbook playbook.yml --tags opencode-update
+ansible-playbook playbook.yml --tags tailscale-update
+ansible-playbook playbook.yml --tags cli-update
+ansible-playbook playbook.yml --tags zsh-update
 
 # Full re-provision (idempotent)
 ansible-playbook playbook.yml

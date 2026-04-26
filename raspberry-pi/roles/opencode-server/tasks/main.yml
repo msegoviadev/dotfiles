@@ -108,7 +108,7 @@
   register: current_opencode_version
   changed_when: false
   failed_when: false
-  tags: ['opencode', 'opencode-update']
+  tags: ['opencode', 'opencode-update', 'update']
 
 - name: Get latest available OpenCode version from npm
   shell: |
@@ -118,7 +118,7 @@
   register: latest_opencode_version
   changed_when: false
   failed_when: false
-  tags: ['opencode', 'opencode-update']
+  tags: ['opencode', 'opencode-update', 'update']
 
 - name: Display version comparison
   debug:
@@ -126,7 +126,7 @@
       Current version: {{ current_opencode_version.stdout }}
       Latest version: {{ latest_opencode_version.stdout }}
       Update needed: {{ current_opencode_version.stdout != latest_opencode_version.stdout and current_opencode_version.stdout != "not-installed" }}
-  tags: ['opencode', 'opencode-update']
+  tags: ['opencode', 'opencode-update', 'update']
 
 - name: Remember current version number for display purposes
   set_fact:
@@ -134,7 +134,7 @@
   when: 
     - current_opencode_version.stdout != "not-installed"
     - current_opencode_version.stdout != latest_opencode_version.stdout
-  tags: ['opencode', 'opencode-update']
+  tags: ['opencode', 'opencode-update', 'update']
 
 - name: Update OpenCode via npm
   shell: |
@@ -150,7 +150,7 @@
   notify:
     - restart opencode
     - restart tailscale serve
-  tags: ['opencode', 'opencode-update']
+  tags: ['opencode', 'opencode-update', 'update']
 
 - name: Verify OpenCode was updated successfully
   shell: |
@@ -160,7 +160,7 @@
   register: updated_opencode_version
   changed_when: false
   when: opencode_update_result is changed
-  tags: ['opencode', 'opencode-update']
+  tags: ['opencode', 'opencode-update', 'update']
 
 - name: Display update result
   debug:
@@ -198,7 +198,7 @@
       {% else %}
       ℹ️  No update performed
       {% endif %}
-  tags: ['opencode', 'opencode-update']
+  tags: ['opencode', 'opencode-update', 'update']
 
 # ============================================
 # Task 3: Setup Directories
@@ -360,7 +360,7 @@
     delay: 3
     timeout: 60
   when: opencode_update_result is defined and opencode_update_result is changed
-  tags: ['opencode', 'opencode-update', 'verify']
+  tags: ['opencode', 'opencode-update', 'verify', 'update']
 
 - name: Verify OpenCode health endpoint (after update)
   uri:
@@ -374,7 +374,7 @@
   until: post_update_health_check.status == 200
   when: opencode_update_result is defined and opencode_update_result is changed
   failed_when: false
-  tags: ['opencode', 'opencode-update', 'verify']
+  tags: ['opencode', 'opencode-update', 'verify', 'update']
 
 - name: Display post-update verification status
   debug:
@@ -393,4 +393,4 @@
       ============================================
       {% endif %}
   when: opencode_update_result is defined
-  tags: ['opencode', 'opencode-update', 'verify']
+  tags: ['opencode', 'opencode-update', 'verify', 'update']
