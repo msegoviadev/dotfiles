@@ -29,7 +29,6 @@
     . {{ home_dir }}/.nvm/nvm.sh && nvm install --lts && nvm use --lts
   args:
     executable: /bin/bash
-    creates: "{{ home_dir }}/.nvm/versions/node"
   environment:
     HOME: "{{ home_dir }}"
 
@@ -52,6 +51,15 @@
 - name: Display Node.js and npm versions
   debug:
     msg: "Node.js {{ node_version.stdout }}, npm {{ npm_version.stdout }}"
+
+- name: Fix nvm directory ownership if corrupted
+  shell: |
+    find {{ home_dir }}/.nvm/versions/node -maxdepth 1 -type d ! -user {{ ansible_user }} -exec chown -R {{ ansible_user }}:{{ ansible_user }} {} +
+  args:
+    executable: /bin/bash
+  become: yes
+  changed_when: false
+  failed_when: false
 
 # ============================================
 # Task 2: Install OpenCode
@@ -91,6 +99,7 @@
     executable: /bin/bash
   register: opencode_version
   changed_when: false
+  failed_when: opencode_version.rc != 0
 
 - name: Display OpenCode version and path
   debug:
@@ -311,7 +320,6 @@
   until: health_check.status == 200
   retries: 10
   delay: 3
-  ignore_errors: yes
 
 - name: Display OpenCode server connection information
   debug:
