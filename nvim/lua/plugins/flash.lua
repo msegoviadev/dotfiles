@@ -4,7 +4,7 @@ return {
   opts = {
     modes = {
       char = {
-        enabled = true,
+        enabled = false,
         highlight = { backdrop = true },
       },
       search = {
@@ -24,6 +24,8 @@ return {
     },
   },
   keys = {
+    { "f", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "[F]lash Jump" },
+    { "F", mode = { "n", "x", "o" }, function() require("flash").jump({ search = { forward = false } }) end, desc = "[F]lash Jump Backward" },
     { "s", mode = { "n", "x", "o" }, function() require("flash").jump() end, desc = "[S]earch and Jump" },
     { "S", mode = { "n", "x", "o" }, function() require("flash").treesitter() end, desc = "[S]earch Treesitter" },
     { "r", mode = "o", function() require("flash").treesitter_search() end, desc = "[R]emote Treesitter Search" },

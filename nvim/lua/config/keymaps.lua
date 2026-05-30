@@ -43,6 +43,10 @@ vim.keymap.set("n", "<leader>wh", ":split<cr>", { desc = "[W]indow Split [H]oriz
 vim.keymap.set("v", "<", "<gv", { desc = "Indent left in visual mode" })
 vim.keymap.set("v", ">", ">gv", { desc = "Indent right in visual mode" })
 
+-- Faster vertical scrolling (half page)
+vim.keymap.set("n", "J", "<C-d>", { desc = "Half page down" })
+vim.keymap.set("n", "K", "<C-u>", { desc = "Half page up" })
+
 -- Comment keymaps (using native Neovim 0.10+ commenting)
 vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Comment Line" })
 vim.keymap.set("v", "<leader>/", "gc", { remap = true, desc = "Comment Selected" })
