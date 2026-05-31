@@ -181,8 +181,8 @@ return {
           end, vim.tbl_extend("force", opts, { desc = "[G]oto [R]eferences" }))
 
           -- Hover and signature help
-          vim.keymap.set("n", "K", vim.lsp.buf.hover,
-            vim.tbl_extend("force", opts, { desc = "Hover Documentation" }))
+          vim.keymap.set("n", "<leader>k", vim.lsp.buf.hover,
+            vim.tbl_extend("force", opts, { desc = "[K]nowledge / Hover Documentation" }))
           vim.keymap.set({ "n", "i" }, "<C-k>", vim.lsp.buf.signature_help,
             vim.tbl_extend("force", opts, { desc = "Signature Help" }))
 
