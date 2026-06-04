@@ -81,6 +81,8 @@ Review the diff for:
 - Missing tests or documentation
 - Edge cases
 
+If the user provides a rule set or knowledge vault path (e.g. `@/path/to/api-rules/`), **read all rule files first** and cross-reference every finding against the documented rules. Note the specific rule ID (e.g. `SCHEMA-003`, `HTTP-002`) for each violation — this is required for Step 5.
+
 ### External Fact Verification
 
 Before flagging issues related to external standards, library versions, or specification versions, **verify the claim using WebSearch**. Do not rely on training knowledge for:
@@ -100,6 +102,21 @@ For each finding, prepare:
 - Commit SHAs from diffRefs: `base_sha`, `head_sha`, `start_sha`
 
 Check against existing discussions to avoid duplicates.
+
+**Rule-based comment references:**
+When a comment is based on a specific documented rule, append a reference footer to the body:
+
+```
+> Reference: [RULE-ID](https://gitlab.com/.../file.md?ref_type=heads#rule-anchor)
+```
+
+- Use `/blob/master/` (not `/tree/master/`) for file links
+- Anchor format: heading text lowercased, spaces and special chars replaced by hyphens
+  - `## SCHEMA-003: UPPER_SNAKE_CASE enums` → `#schema-003-upper_snake_case-enums`
+  - `## HTTP-002: Valid response codes per method` → `#http-002-valid-response-codes-per-method`
+- When a comment covers multiple rules, link each separately:
+  `[RULE-A](url#anchor-a), [RULE-B](url#anchor-b)`
+- **Do NOT add a reference footer** for comments that are not based on a specific documented rule
 
 DO NOT propose:
 - Duplicate comments (same file/line with similar content)
@@ -173,6 +190,17 @@ hurl <SKILLS_DIR>/gitlab-mr-shared/templates/create-inline-comment-old.hurl \
   --variable old_path=src/file.ts \
   --variable old_line=20
 ```
+
+### Fetching Content of Large New Files
+
+When a file is entirely new and large, its diff may appear empty in the MR diffs API. Fetch the full content directly from the repository:
+
+```bash
+# URL-encode the file path (replace / with %2F)
+glab api "projects/<project_id>/repository/files/<encoded_path>/raw?ref=<head_sha>"
+```
+
+Example: `api/my-service/REST/openapi.yaml` → `api%2Fmy-service%2FREST%2Fopenapi.yaml`
 
 ## NEVER Auto-Post
 

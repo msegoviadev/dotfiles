@@ -130,17 +130,12 @@ Present the proposed content and get explicit approval before proceeding.
 
 ### Step 5: Execute the write operation
 
-> **Warning: hurl templates do not JSON-escape `{{body}}`.**
-> Confluence storage format HTML always contains double quotes in XML attributes
-> (e.g. `ac:local-id="..."`, `href="..."`). Passing such content via `--variable body=...`
-> produces malformed JSON and the request fails with HTTP 400.
->
-> For any body containing HTML attributes, use Python instead:
-> - Build the body string in Python
-> - Serialize the full payload with `json.dumps()` (handles all escaping)
-> - Send with `urllib.request` (stdlib) or `requests`
->
-> Reserve the hurl templates for simple plain-text bodies with no double quotes.
+> **Gotchas when using Python for writes:**
+> - hurl templates don't JSON-escape `{{body}}` — use Python + `json.dumps()` for any body with HTML attributes
+> - Use `subprocess.run(['curl', '-s', '-k', '-u', ...])` — do NOT use `urllib.request` or `requests`: pyenv Python uses Homebrew OpenSSL which lacks corporate proxy certs (Cisco Umbrella); system `curl` uses SecureTransport/macOS Keychain and works
+> - Don't pass `--cacert` to curl — SecureTransport handles trust from the Keychain automatically
+> - Write the JSON payload to a temp file and pass with `-d @path`; use `dir=os.environ.get('TMPDIR', '/tmp')` for the temp dir (sandbox restriction)
+> - Token in the credentials file may contain `=` signs — parse with `line.split('=', 1)` not `cut -d= -f2`
 
 **Creating a page** — use the create template. Requires `spaceId` and optionally `parentId`:
 
@@ -171,6 +166,30 @@ After creating or updating, the page is accessible at:
 ```
 https://your-org.atlassian.net/wiki/spaces/<SPACE_KEY>/pages/<page_id>
 ```
+
+## PlantUML macros in Confluence storage format
+
+The Confluence UML macro embeds a `code` macro inside a `uml` macro:
+
+```xml
+<ac:structured-macro ac:name="uml" ac:schema-version="1" data-layout="default">
+  <ac:rich-text-body>
+    <ac:structured-macro ac:name="code" ac:schema-version="1">
+      <ac:plain-text-body><![CDATA[
+@startuml
+... diagram source ...
+@enduml
+      ]]></ac:plain-text-body>
+    </ac:structured-macro>
+  </ac:rich-text-body>
+</ac:structured-macro>
+```
+
+**Color syntax gotchas:**
+- Use `:text; <<#color>>` — stereotype at the end, no `#color:` prefix
+- The old `#color:text;` prefix syntax now triggers deprecation warnings in the plugin
+- For multi-line nodes the stereotype goes on the last line: `:line1\nline2; <<#cce5ff>>`
+- In Python triple-quoted strings, `\n` in a `note right: text\nmore` becomes a real newline and breaks PlantUML's single-line note syntax — use `\\n` instead
 
 ## When to Load Full References
 

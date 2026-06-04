@@ -50,3 +50,6 @@ vim.keymap.set("n", "K", "<C-u>", { desc = "Half page up" })
 -- Comment keymaps (using native Neovim 0.10+ commenting)
 vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Comment Line" })
 vim.keymap.set("v", "<leader>/", "gc", { remap = true, desc = "Comment Selected" })
+
+-- Open merge conflict resolution tool
+vim.keymap.set("n", "<leader>cm", "<cmd>DiffviewOpen<cr>", { desc = "[C]onflict [M]erge tool" })
