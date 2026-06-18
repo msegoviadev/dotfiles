@@ -1,6 +1,6 @@
 # Dotfiles
 
-Personal configuration files for development tools.
+Personal dotfiles and configuration for macOS development.
 
 ## Setup
 
