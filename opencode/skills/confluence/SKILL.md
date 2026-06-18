@@ -136,6 +136,8 @@ Present the proposed content and get explicit approval before proceeding.
 > - Don't pass `--cacert` to curl — SecureTransport handles trust from the Keychain automatically
 > - Write the JSON payload to a temp file and pass with `-d @path`; use `dir=os.environ.get('TMPDIR', '/tmp')` for the temp dir (sandbox restriction)
 > - Token in the credentials file may contain `=` signs — parse with `line.split('=', 1)` not `cut -d= -f2`
+> - **CDATA and the `!` escaping trap:** The Bash tool escapes `!` to `\!` in every inline command, which silently corrupts `<![CDATA[` to `<\![CDATA[` — Confluence then strips the macro body without any error. Any Python script that writes storage-format content containing CDATA **must be written to a file with the Write tool** and run as `python3 /path/to/script.py`. Never inline such scripts. As a safe pattern, build the CDATA markers by concatenation: `cdata_open = '<' + '![CDATA['`.
+> - **`ac:local-id` is required on code macros:** Confluence silently strips `<ac:plain-text-body>` content from `code` macros that have no `ac:local-id` attribute. Always include `ac:local-id` (any unique short hex string, e.g. `ac:local-id="a1b2c3d4e5f6"`) when inserting a new `code` macro programmatically.
 
 **Creating a page** — use the create template. Requires `spaceId` and optionally `parentId`:
 
