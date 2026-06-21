@@ -562,6 +562,9 @@ return {
         },
         pickers = {
           live_grep = {
+            additional_args = function()
+              return { "--fixed-strings" }
+            end,
             path_display = { "relative" },
             layout_strategy = "vertical",
             layout_config = {
