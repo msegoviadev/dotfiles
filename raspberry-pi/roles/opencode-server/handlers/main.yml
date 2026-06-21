@@ -16,7 +16,7 @@
 - name: Wait for OpenCode to be ready
   wait_for:
     host: localhost
-    port: 4096
+    port: "{{ opencode_port }}"
     delay: 2
     timeout: 30
   listen: "restart opencode"

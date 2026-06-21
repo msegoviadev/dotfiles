@@ -147,12 +147,12 @@
 
 - name: Update OpenCode via npm
   shell: |
-    . {{ home_dir }}/.nvm/nvm.sh && npm update -g opencode-ai
+    . {{ home_dir }}/.nvm/nvm.sh && npm install -g opencode-ai@latest
   args:
     executable: /bin/bash
   environment:
     HOME: "{{ home_dir }}"
-  when: 
+  when:
     - current_opencode_version.stdout != "not-installed"
     - current_opencode_version.stdout != latest_opencode_version.stdout
   register: opencode_update_result
@@ -363,7 +363,7 @@
 - name: Wait for OpenCode service to be fully ready (after update)
   wait_for:
     host: localhost
-    port: 4096
+    port: "{{ opencode_port }}"
     state: started
     delay: 3
     timeout: 60
@@ -372,7 +372,7 @@
 
 - name: Verify OpenCode health endpoint (after update)
   uri:
-    url: "http://localhost:4096/global/health"
+    url: "http://localhost:{{ opencode_port }}/global/health"
     method: GET
     status_code: 200
     timeout: 10
