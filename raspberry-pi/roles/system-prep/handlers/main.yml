@@ -1,0 +1,13 @@
+---
+# System Prep Handlers
+
+- name: validate sshd configuration
+  command: sshd -t
+  changed_when: false
+  listen: validate and restart sshd
+
+- name: restart sshd
+  systemd:
+    name: sshd
+    state: restarted
+  listen: validate and restart sshd

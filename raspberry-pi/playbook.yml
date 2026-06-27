@@ -18,6 +18,10 @@
       become: yes
       tags: ['system', 'prep']
 
+    - role: firewall
+      become: yes
+      tags: ['firewall', 'network', 'hardening']
+
     - role: zsh
       become: no
       tags: ['zsh', 'shell']
@@ -41,6 +45,14 @@
     - role: deutsch-app
       become: no
       tags: ['deutsch-app']
+
+    - role: coolify-server
+      become: yes
+      tags: ['coolify', 'server']
+
+    - role: cloudflare-tunnel
+      become: yes
+      tags: ['cloudflare', 'tunnel']
 
   post_tasks:
     - name: Display completion message

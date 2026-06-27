@@ -11,7 +11,7 @@ WorkingDirectory={{ deutsch_app_dir }}
 Environment="HOME={{ home_dir }}"
 Environment="NVM_DIR={{ home_dir }}/.nvm"
 Environment="NODE_ENV=production"
-ExecStart=/bin/bash -c 'source {{ home_dir }}/.nvm/nvm.sh && npm start'
+ExecStart=/bin/bash -c 'source {{ home_dir }}/.nvm/nvm.sh && npm start -- --hostname {{ deutsch_app_hostname }}'
 Restart=on-failure
 RestartSec=10s
 StartLimitInterval=300s

@@ -1,0 +1,252 @@
+---
+# ============================================
+# Coolify Server Role
+# ============================================
+# Purpose: Install and configure Coolify on Raspberry Pi
+# Runs with: mixed (some tasks need become: yes)
+# Notes:
+#   - Coolify dashboard is kept private via Tailscale Serve.
+#   - Traefik proxy is configured to listen on localhost:8080 so it does not
+#     conflict with Tailscale Serve on port 443.
+# ============================================
+
+# ============================================
+# Task 1: Install prerequisites
+# ============================================
+
+- name: Install Coolify prerequisites
+  apt:
+    name:
+      - curl
+      - git
+      - jq
+    state: present
+    update_cache: yes
+  become: yes
+  tags: ['coolify', 'server']
+
+# ============================================
+# Task 2: Check if Coolify is already installed
+# ============================================
+
+- name: Check if Coolify install marker exists
+  stat:
+    path: /data/coolify/source/docker-compose.yml
+  register: coolify_installed
+  tags: ['coolify', 'server']
+
+# ============================================
+# Task 3: Install Coolify
+# ============================================
+
+- name: Install Coolify
+  shell: |
+    curl -fsSL https://cdn.coollabs.io/coolify/install.sh | sudo bash
+  args:
+    executable: /bin/bash
+  become: yes
+  when: not coolify_installed.stat.exists
+  register: coolify_install_result
+  tags: ['coolify', 'server']
+
+# ============================================
+# Task 4: Configure Traefik proxy to listen on localhost:8080
+# ============================================
+
+- name: Ensure Coolify proxy compose directory exists
+  file:
+    path: /data/coolify/proxy
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+  tags: ['coolify', 'server']
+
+- name: Deploy custom proxy override for localhost-only HTTP
+  copy:
+    content: |
+      services:
+        traefik:
+          ports: !override
+            - "127.0.0.1:{{ coolify_proxy_http_port }}:8080"
+            - "127.0.0.1:{{ coolify_proxy_admin_port | default(8081) }}:8081"
+          healthcheck:
+            test: 'wget -qO- http://localhost:8080/ping || exit 1'
+          command:
+            - --ping=true
+            - --ping.entrypoint=http
+            - --api.dashboard=false
+            - --entrypoints.http.address=:8080
+            - --entrypoints.http.forwardedheaders.insecure=true
+            - --entrypoints.admin.address=:8081
+            - --entrypoints.https.address=:8443
+            - --entrypoints.http.http.encodequerysemicolons=true
+            - --entryPoints.http.http2.maxConcurrentStreams=250
+            - --entrypoints.https.http.encodequerysemicolons=true
+            - --entryPoints.https.http2.maxConcurrentStreams=250
+            - --providers.file.directory=/dynamic
+            - --providers.file.watch=true
+            - --providers.docker=true
+            - --providers.docker.exposedbydefault=false
+            - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-}
+            - --certificatesresolvers.letsencrypt.acme.storage=/traefik/acme.json
+            - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+            - --serverstransport.insecureskipverify=true
+          volumes:
+            - "/data/coolify/proxy/dynamic:/dynamic:ro"
+    dest: /data/coolify/proxy/docker-compose.custom.yml
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: restart coolify proxy
+  tags: ['coolify', 'server']
+
+- name: Ensure Traefik dynamic config directory exists
+  file:
+    path: /data/coolify/proxy/dynamic
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+  tags: ['coolify', 'server']
+
+- name: Deploy Keycloak admin block dynamic config
+  copy:
+    content: |
+      http:
+        routers:
+          keycloak-admin-block:
+            rule: "Host(`keycloak.grapity.dev`) && (PathPrefix(`/admin`) || Path(`/`))"
+            entryPoints:
+              - http
+            middlewares:
+              - keycloak-admin-block
+            service: keycloak-admin-block-service
+            priority: 1000
+          keycloak-admin-access:
+            rule: "PathPrefix(`/`)"
+            entryPoints:
+              - admin
+            service: keycloak-admin-block-service
+        middlewares:
+          keycloak-admin-block:
+            replacePathRegex:
+              regex: "^.*$"
+              replacement: "/__grapity_blocked__"
+        services:
+          keycloak-admin-block-service:
+            loadBalancer:
+              servers:
+                - url: "http://keycloak:8080"
+    dest: /data/coolify/proxy/dynamic/keycloak-admin-block.yml
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: restart coolify proxy
+  tags: ['coolify', 'server']
+
+- name: Ensure Coolify compose custom override directory exists
+  file:
+    path: /data/coolify/source
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+  tags: ['coolify', 'server']
+
+- name: Deploy Coolify dashboard and realtime bind override
+  copy:
+    content: |
+      services:
+        coolify:
+          ports: !override
+            - "127.0.0.1:8000:8080"
+        soketi:
+          ports: !override
+            - "127.0.0.1:6001:6001"
+            - "127.0.0.1:6002:6002"
+    dest: /data/coolify/source/docker-compose.custom.yml
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  notify: restart coolify
+  tags: ['coolify', 'server']
+
+# ============================================
+# Task 7: Ensure Coolify containers restart on boot and after config changes
+# ============================================
+
+- name: Ensure Docker is enabled and running
+  systemd:
+    name: docker
+    enabled: yes
+    state: started
+  become: yes
+  tags: ['coolify', 'server']
+
+- name: Restart Coolify containers to apply overrides
+  shell: |
+    docker compose --env-file /data/coolify/source/.env \
+      -f /data/coolify/source/docker-compose.yml \
+      -f /data/coolify/source/docker-compose.prod.yml \
+      -f /data/coolify/source/docker-compose.custom.yml \
+      down --remove-orphans && \
+    sleep 5 && \
+    docker compose --env-file /data/coolify/source/.env \
+      -f /data/coolify/source/docker-compose.yml \
+      -f /data/coolify/source/docker-compose.prod.yml \
+      -f /data/coolify/source/docker-compose.custom.yml \
+      up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  become: yes
+  tags: ['coolify', 'server']
+
+- name: Restart Coolify proxy to apply override
+  shell: |
+    docker compose -f /data/coolify/proxy/docker-compose.yml -f /data/coolify/proxy/docker-compose.custom.yml up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  become: yes
+  tags: ['coolify', 'server']
+
+- name: Wait for Coolify dashboard to be reachable after restart
+  uri:
+    url: "http://127.0.0.1:8000/login"
+    method: GET
+    status_code: 200
+  register: coolify_health_after_restart
+  until: coolify_health_after_restart.status == 200
+  retries: 30
+  delay: 5
+  tags: ['coolify', 'server']
+
+# ============================================
+# Task 7: Display status
+# ============================================
+
+- name: Display Coolify setup complete message
+  debug:
+    msg: |
+      ============================================
+      Coolify Server Setup Complete!
+      ============================================
+
+      Dashboard (private, via Tailscale):
+        https://{{ tailscale_hostname }}.lamancha-smoot.ts.net/coolify
+
+      Internal proxy:
+        http://127.0.0.1:8080
+
+      Next steps:
+        1. Open the dashboard via Tailscale and create the root user.
+        2. Deploy Keycloak and the panel service through Coolify.
+
+      ============================================
+  tags: ['coolify', 'server']

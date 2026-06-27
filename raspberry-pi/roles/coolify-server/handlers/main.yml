@@ -1,0 +1,54 @@
+---
+# ============================================
+# Coolify Server Handlers
+# ============================================
+
+- name: restart coolify
+  shell: |
+    docker compose --env-file /data/coolify/source/.env \
+      -f /data/coolify/source/docker-compose.yml \
+      -f /data/coolify/source/docker-compose.prod.yml \
+      -f /data/coolify/source/docker-compose.custom.yml \
+      down --remove-orphans && \
+    sleep 5 && \
+    docker compose --env-file /data/coolify/source/.env \
+      -f /data/coolify/source/docker-compose.yml \
+      -f /data/coolify/source/docker-compose.prod.yml \
+      -f /data/coolify/source/docker-compose.custom.yml \
+      up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  become: yes
+
+- name: restart coolify proxy
+  shell: |
+    docker compose -f /data/coolify/proxy/docker-compose.yml -f /data/coolify/proxy/docker-compose.custom.yml down --remove-orphans && \
+    sleep 3 && \
+    docker compose -f /data/coolify/proxy/docker-compose.yml -f /data/coolify/proxy/docker-compose.custom.yml up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  become: yes
+
+- name: connect coolify proxy to keycloak network
+  shell: |
+    KEYCLOAK_CONTAINER=$(docker ps --filter "label=coolify.serviceName=keycloak" --format "{{.Names}}")
+    if [ -z "$KEYCLOAK_CONTAINER" ]; then
+      echo "Keycloak container not found, skipping network connect"
+      exit 0
+    fi
+    KEYCLOAK_NETWORK=$(docker inspect "$KEYCLOAK_CONTAINER" --format "{{range \$k, \$v := .NetworkSettings.Networks}}{{\$k}} {{end}}")
+    if [ -z "$KEYCLOAK_NETWORK" ]; then
+      echo "Keycloak network not found, skipping network connect"
+      exit 0
+    fi
+    FIRST_NETWORK=$(echo "$KEYCLOAK_NETWORK" | awk '{print $1}')
+    docker network connect "$FIRST_NETWORK" coolify-proxy
+  args:
+    executable: /bin/bash
+  become: yes
+  register: network_connect
+  changed_when: "'already exists' not in network_connect.stderr | default('')"
+  failed_when:
+    - network_connect.rc != 0
+    - "'already exists' not in network_connect.stderr | default('')"
+  listen: restart coolify proxy

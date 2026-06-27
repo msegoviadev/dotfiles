@@ -1,0 +1,12 @@
+ingress:
+{% for rule in cloudflare_tunnel_ingress %}
+{% if rule.hostname is defined %}
+  - hostname: "{{ rule.hostname }}"
+{% if rule.path is defined %}
+    path: "{{ rule.path }}"
+{% endif %}
+    service: {{ rule.service }}
+{% else %}
+  - service: {{ rule.service }}
+{% endif %}
+{% endfor %}

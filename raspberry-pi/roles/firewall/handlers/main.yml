@@ -1,0 +1,7 @@
+---
+# Firewall Role Handlers
+
+- name: reload ufw
+  ufw:
+    state: reloaded
+  become: yes

@@ -1,0 +1,9 @@
+---
+# Deutsch App Handlers
+
+- name: restart deutsch-app
+  systemd:
+    name: deutsch-app
+    state: restarted
+  become: yes
+  listen: restart deutsch-app

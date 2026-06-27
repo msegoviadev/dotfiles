@@ -20,6 +20,7 @@
   become: yes
   register: deutsch_service_file
   tags: ['deutsch-app']
+  notify: restart deutsch-app
 
 - name: Reload systemd daemon
   systemd:

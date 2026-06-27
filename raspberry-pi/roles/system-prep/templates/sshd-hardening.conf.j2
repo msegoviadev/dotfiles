@@ -1,0 +1,7 @@
+# SSH hardening configuration
+# Applied via /etc/ssh/sshd_config.d/99-hardening.conf
+
+PasswordAuthentication no
+PermitRootLogin no
+PubkeyAuthentication yes
+AuthenticationMethods publickey

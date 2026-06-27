@@ -1,0 +1,13 @@
+---
+# Host-specific secrets and overrides for neo (Raspberry Pi)
+#
+# This file is gitignored. Copy it to host_vars/neo.yml and fill in your secrets.
+#
+# Required for cloudflare-tunnel role:
+# cloudflare_tunnel_token: "<paste-token-from-cloudflare-dashboard>"
+#
+# Required for the Grapity demo panel and demo containers after Keycloak is deployed:
+# grapity_keycloak_bootstrap_client_secret: "<paste-secret-from-keycloak>"
+
+cloudflare_tunnel_token: ""
+grapity_keycloak_bootstrap_client_secret: ""

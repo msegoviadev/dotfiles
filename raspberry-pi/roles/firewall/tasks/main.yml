@@ -1,0 +1,80 @@
+---
+# Firewall Role
+# Purpose: Install and configure UFW + ufw-docker to block direct Docker
+#          port exposure while allowing SSH from the home LAN and all
+#          traffic over Tailscale.
+
+- name: Install ufw
+  apt:
+    name: ufw
+    state: present
+    update_cache: yes
+  become: yes
+  register: ufw_install
+
+- name: Download ufw-docker script
+  get_url:
+    url: https://raw.githubusercontent.com/chaifeng/ufw-docker/251123/ufw-docker
+    dest: /usr/local/bin/ufw-docker
+    mode: '0755'
+  become: yes
+
+- name: Configure UFW default incoming policy
+  ufw:
+    direction: incoming
+    policy: deny
+  become: yes
+  when: not ansible_check_mode
+
+- name: Configure UFW default outgoing policy
+  ufw:
+    direction: outgoing
+    policy: allow
+  become: yes
+  when: not ansible_check_mode
+
+- name: Allow SSH from home LAN subnet
+  ufw:
+    rule: allow
+    proto: tcp
+    src: "{{ home_lan_subnet }}"
+    port: "22"
+    comment: "SSH from home LAN"
+  become: yes
+  when: not ansible_check_mode
+
+- name: Allow all traffic on Tailscale interface
+  ufw:
+    rule: allow
+    interface: tailscale0
+    direction: in
+    comment: "Allow all inbound on Tailscale"
+  become: yes
+  when: not ansible_check_mode
+
+- name: Allow established and related connections
+  ufw:
+    rule: allow
+    direction: in
+    comment: "Allow established and related"
+  become: yes
+  when: not ansible_check_mode
+
+- name: Enable UFW
+  ufw:
+    state: enabled
+  become: yes
+  when: not ansible_check_mode
+
+- name: Install ufw-docker after.rules
+  command: /usr/local/bin/ufw-docker install
+  become: yes
+  register: ufw_docker_install
+  changed_when: "'already installed' not in ufw_docker_install.stdout"
+  when: not ansible_check_mode
+
+- name: Reload UFW to apply ufw-docker rules
+  ufw:
+    state: reloaded
+  become: yes
+  when: not ansible_check_mode

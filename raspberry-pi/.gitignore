@@ -1,0 +1,8 @@
+# Host-specific secrets
+host_vars/neo.yml
+
+# Local environment files
+.env
+
+# Ansible retry files
+*.retry

@@ -1,0 +1,186 @@
+---
+# ============================================
+# Cloudflare Tunnel Role
+# ============================================
+# Purpose: Install cloudflared and route public traffic to Coolify
+# Runs with: mixed (some tasks need become: yes)
+# Notes:
+#   - The tunnel itself must be created in the Cloudflare dashboard first.
+#   - Pass the tunnel token via cloudflare_tunnel_token in host_vars/neo.yml.
+# ============================================
+
+# ============================================
+# Task 1: Validate required variables
+# ============================================
+
+- name: Fail if tunnel token is missing
+  fail:
+    msg: |
+      Set cloudflare_tunnel_token in host_vars/neo.yml before running this role.
+      See host_vars/neo.yml.example for the format.
+  when: cloudflare_tunnel_token is not defined or not cloudflare_tunnel_token
+  tags: ['cloudflare', 'tunnel']
+
+# ============================================
+# Task 2: Install cloudflared
+# ============================================
+
+- name: Ensure apt keyrings directory exists
+  file:
+    path: /usr/share/keyrings
+    state: directory
+    mode: '0755'
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Add Cloudflare APT repository key
+  shell: |
+    curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+  args:
+    executable: /bin/bash
+    creates: /usr/share/keyrings/cloudflare-main.gpg
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Add Cloudflare APT repository
+  copy:
+    content: "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main\n"
+    dest: /etc/apt/sources.list.d/cloudflared.list
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Install cloudflared
+  apt:
+    name: cloudflared
+    state: present
+    update_cache: yes
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+# ============================================
+# Task 3: Deploy tunnel configuration
+# ============================================
+
+- name: Create cloudflared configuration directory
+  file:
+    path: /etc/cloudflared
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Deploy tunnel config
+  template:
+    src: config.yml.j2
+    dest: /etc/cloudflared/config.yml
+    owner: root
+    group: root
+    mode: '0600'
+  become: yes
+  notify: restart cloudflared
+  tags: ['cloudflare', 'tunnel']
+
+# ============================================
+# Task 4: Install and start cloudflared service
+# ============================================
+
+- name: Install cloudflared systemd service
+  shell: |
+    cloudflared service install {{ cloudflare_tunnel_token }}
+  args:
+    executable: /bin/bash
+    creates: /etc/systemd/system/cloudflared.service
+  become: yes
+  notify: restart cloudflared
+  no_log: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Enable cloudflared service
+  systemd:
+    name: cloudflared
+    enabled: yes
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Start cloudflared service
+  systemd:
+    name: cloudflared
+    state: started
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+# ============================================
+# Task 5: DNS records
+# ============================================
+#
+# DNS records must be created manually in the Cloudflare dashboard because
+# cloudflared tunnel route dns requires an origin certificate (cert.pem) that
+# is only available after authenticating with `cloudflared tunnel login`.
+# The token-based connector does not include this certificate.
+
+- name: Display DNS records to create manually
+  debug:
+    msg: |
+      Create the following DNS records in the Cloudflare dashboard for grapity.dev:
+
+      {% for rule in cloudflare_tunnel_ingress %}
+      {% if rule.hostname is defined %}
+        {{ rule.hostname }} -> CNAME -> <tunnel-uuid>.cfargotunnel.com
+      {% endif %}
+      {% endfor %}
+
+      The wildcard record *.grapity.dev must also be added manually.
+  tags: ['cloudflare', 'tunnel']
+
+# ============================================
+# Task 6: Verify tunnel status
+# ============================================
+
+- name: Wait for cloudflared service to be running
+  systemd:
+    name: cloudflared
+    state: started
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Check cloudflared logs for successful connection
+  shell: |
+    journalctl -u cloudflared --no-pager -n 20 | grep -qE "connection registered|Registered tunnel connection|Tunnel server stopped"
+  args:
+    executable: /bin/bash
+  register: tunnel_log_check
+  until: tunnel_log_check.rc == 0
+  retries: 12
+  delay: 5
+  become: yes
+  tags: ['cloudflare', 'tunnel']
+
+- name: Display Cloudflare Tunnel setup complete message
+  debug:
+    msg: |
+      ============================================
+      Cloudflare Tunnel Setup Complete!
+      ============================================
+
+      Tunnel name: {{ cloudflare_tunnel_name }}
+      Config: /etc/cloudflared/config.yml
+
+      Hostnames configured in config.yml:
+      {% for rule in cloudflare_tunnel_ingress %}
+      {% if rule.hostname is defined %}
+        - {{ rule.hostname }} -> {{ rule.service }}
+      {% endif %}
+      {% endfor %}
+
+      Next step:
+        Create CNAME records in the Cloudflare DNS editor pointing each
+        hostname to your tunnel endpoint (<tunnel-uuid>.cfargotunnel.com).
+        The wildcard record *.grapity.dev must be added manually.
+
+      ============================================
+  tags: ['cloudflare', 'tunnel']

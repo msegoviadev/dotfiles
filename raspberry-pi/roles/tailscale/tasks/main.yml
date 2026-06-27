@@ -59,6 +59,36 @@
     msg: "{{ 'Tailscale is authenticated and connected' if tailscale_status.rc == 0 else 'Tailscale is NOT authenticated - SSH to server and run: sudo tailscale up --hostname=' + tailscale_hostname }}"
 
 # ============================================
+# Task 2B: Enable Tailscale SSH
+# ============================================
+
+- name: Ensure current user is Tailscale operator
+  command: tailscale set --operator={{ ansible_user }}
+  become: yes
+  when:
+    - tailscale_ssh_enabled | default(false) | bool
+    - tailscale_status.rc == 0
+  failed_when: false
+
+- name: Check if Tailscale SSH is enabled
+  command: tailscale debug prefs
+  register: tailscale_debug_prefs
+  changed_when: false
+  failed_when: false
+  when:
+    - tailscale_ssh_enabled | default(false) | bool
+    - tailscale_status.rc == 0
+
+- name: Enable Tailscale SSH
+  command: tailscale set --ssh=true
+  when:
+    - tailscale_ssh_enabled | default(false) | bool
+    - tailscale_status.rc == 0
+    - tailscale_debug_prefs.stdout is defined
+    - "'\"RunSSH\": true' not in tailscale_debug_prefs.stdout"
+  failed_when: false
+
+# ============================================
 # Task 3: Enable Tailscale service
 # ============================================
 
