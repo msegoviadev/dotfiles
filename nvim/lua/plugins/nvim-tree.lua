@@ -17,20 +17,29 @@ return {
 
     local icons = require("config.icons")
 
-    -- Set up custom highlights for git status colors (catppuccin-mocha palette)
-    vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#f9e2af" })   -- Yellow for modified files
-    vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#a6e3a1" })     -- Green for new files
-    vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = "#f38ba8" }) -- Red for deleted files
-    vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = "#fab387" }) -- Peach for renamed files
-    vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#94e2d5" })  -- Teal for staged files
-    vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#cba6f7" })   -- Mauve for merge conflicts
-    vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#6c7086" }) -- Subtext1 for ignored files
+    local function set_nvim_tree_highlights()
+      -- Custom highlights for git status colors (catppuccin-mocha palette)
+      vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#f9e2af" })   -- Yellow for modified files
+      vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#a6e3a1" })     -- Green for new files
+      vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = "#f38ba8" }) -- Red for deleted files
+      vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = "#fab387" }) -- Peach for renamed files
+      vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#94e2d5" })  -- Teal for staged files
+      vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#cba6f7" })   -- Mauve for merge conflicts
+      vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#6c7086" }) -- Subtext1 for ignored files
 
-    -- Make folders match file color exactly (using catppuccin text color)
-    vim.api.nvim_set_hl(0, "NvimTreeFolderName", { fg = "#cdd6f4", bg = "NONE" })
-    vim.api.nvim_set_hl(0, "NvimTreeOpenedFolderName", { fg = "#cdd6f4", bg = "NONE" })
-    vim.api.nvim_set_hl(0, "NvimTreeEmptyFolderName", { fg = "#cdd6f4", bg = "NONE" })
-    vim.api.nvim_set_hl(0, "NvimTreeFolderIcon", { fg = "#cdd6f4", bg = "NONE" })
+      -- Make folders match file color exactly (using catppuccin text color)
+      vim.api.nvim_set_hl(0, "NvimTreeFolderName", { fg = "#cdd6f4", bg = "NONE" })
+      vim.api.nvim_set_hl(0, "NvimTreeOpenedFolderName", { fg = "#cdd6f4", bg = "NONE" })
+      vim.api.nvim_set_hl(0, "NvimTreeEmptyFolderName", { fg = "#cdd6f4", bg = "NONE" })
+      vim.api.nvim_set_hl(0, "NvimTreeFolderIcon", { fg = "#cdd6f4", bg = "NONE" })
+    end
+
+    -- Apply highlights now and re-apply whenever the colorscheme changes,
+    -- so they are not overwritten by the colorscheme.
+    set_nvim_tree_highlights()
+    vim.api.nvim_create_autocmd("ColorScheme", {
+      callback = set_nvim_tree_highlights,
+    })
 
     require("nvim-tree").setup({
       filesystem_watchers = {
@@ -48,6 +57,11 @@ return {
       hijack_netrw = true,
       auto_reload_on_write = false,
       sync_root_with_cwd = true,
+      git = {
+        enable = true,
+        show_on_dirs = true,
+        show_on_open_dirs = true,
+      },
       filters = {
         git_ignored = false,
       },
@@ -69,7 +83,7 @@ return {
       renderer = {
         add_trailing = false,
         group_empty = false,
-        highlight_git = true,
+        highlight_git = "all",
         full_name = false,
         highlight_opened_files = "none",
         root_folder_label = ":t",
