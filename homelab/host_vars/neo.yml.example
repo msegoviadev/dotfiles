@@ -2,7 +2,16 @@
 # Host-specific secrets and overrides for neo (Raspberry Pi)
 #
 # This file is gitignored. Copy it to host_vars/neo.yml and fill in your secrets.
-#
+
+# Host identity
+tailscale_hostname: neo
+
+# Enable optional services on this host
+opencode_server_install: true
+deutsch_app_install: true
+coolify_server_install: true
+cloudflare_tunnel_install: true
+
 # Required for cloudflare-tunnel role:
 # cloudflare_tunnel_token: "<paste-token-from-cloudflare-dashboard>"
 #

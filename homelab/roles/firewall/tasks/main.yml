@@ -66,12 +66,21 @@
   become: yes
   when: not ansible_check_mode
 
+- name: Check if Docker is installed
+  command: docker --version
+  become: yes
+  register: docker_check
+  failed_when: false
+  changed_when: false
+
 - name: Install ufw-docker after.rules
   command: /usr/local/bin/ufw-docker install
   become: yes
   register: ufw_docker_install
   changed_when: "'already installed' not in ufw_docker_install.stdout"
-  when: not ansible_check_mode
+  when:
+    - not ansible_check_mode
+    - docker_check.rc == 0
 
 - name: Reload UFW to apply ufw-docker rules
   ufw:

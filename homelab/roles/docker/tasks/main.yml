@@ -1,0 +1,35 @@
+---
+# Docker Role
+# Purpose: Install Docker Engine as a base tool on all servers.
+# Notes:
+#   - Uses the official Docker install script for cross-distro reliability.
+#   - Adds the ansible_user to the docker group for passwordless docker commands.
+#   - Ensures the Docker daemon is enabled and running.
+
+- name: Check if Docker is installed
+  command: docker --version
+  become: yes
+  register: docker_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Docker via official script
+  shell: curl -fsSL https://get.docker.com | sh
+  args:
+    executable: /bin/bash
+  become: yes
+  when: docker_check.rc != 0
+
+- name: Ensure Docker daemon is enabled and running
+  systemd:
+    name: docker
+    enabled: yes
+    state: started
+  become: yes
+
+- name: Add current user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+  become: yes

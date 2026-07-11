@@ -1,0 +1,24 @@
+---
+# Host-specific secrets and overrides for bee (Beelink MINI-S13)
+#
+# This file is gitignored. Copy it from host_vars/bee.yml.example and fill in
+# your secrets.
+#
+# Example:
+# cloudflare_tunnel_token: "<paste-token-from-cloudflare-dashboard>"
+
+# Tailscale hostname for this server
+tailscale_hostname: bee
+
+# Optional services (defaults to false in group_vars/all.yml)
+opencode_server_install: false
+deutsch_app_install: false
+coolify_server_install: false
+cloudflare_tunnel_install: false
+
+# Cloudflare tunnel token if this server should run a tunnel.
+# Currently not used for bee; the tunnel runs on neo.
+# cloudflare_tunnel_token: ""
+
+# Keycloak bootstrap client secret if needed
+# grapity_keycloak_bootstrap_client_secret: ""

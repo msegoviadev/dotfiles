@@ -69,6 +69,15 @@ yq_version: latest
 astgrep_version: latest
 
 # ============================================
+# Optional Service Install Flags
+# ============================================
+# Override these per-host in host_vars/<hostname>.yml
+opencode_server_install: false
+deutsch_app_install: false
+coolify_server_install: false
+cloudflare_tunnel_install: false
+
+# ============================================
 # OpenCode Server Configuration
 # ============================================
 opencode_hostname: "127.0.0.1"
@@ -107,7 +116,6 @@ tailscale_hostname: neo
 # ============================================
 # Coolify Configuration
 # ============================================
-coolify_install: true
 coolify_proxy_http_port: 8080          # avoids conflict with Tailscale 443
 coolify_proxy_admin_port: 8081         # local-only entrypoint for Keycloak admin access
 coolify_dashboard_bind: "127.0.0.1"    # dashboard only via Tailscale

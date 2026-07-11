@@ -1,10 +1,10 @@
 ---
-- name: Provision Raspberry Pi - Phases 2 & 3 (Shell, Dev Environment & OpenCode Server)
-  hosts: raspberry_pi
+- name: Provision Homelab Servers - Shell, Dev Environment & OpenCode Server
+  hosts: servers
   gather_facts: yes
 
   pre_tasks:
-    - name: Test connection to Raspberry Pi
+    - name: Test connection to servers
       ping:
       tags: always
 
@@ -17,6 +17,10 @@
     - role: system-prep
       become: yes
       tags: ['system', 'prep']
+
+    - role: docker
+      become: yes
+      tags: ['docker', 'container']
 
     - role: firewall
       become: yes
@@ -41,30 +45,34 @@
     - role: opencode-server
       become: no
       tags: ['opencode', 'server']
+      when: opencode_server_install | default(false)
 
     - role: deutsch-app
       become: no
       tags: ['deutsch-app']
+      when: deutsch_app_install | default(false)
 
     - role: coolify-server
       become: yes
       tags: ['coolify', 'server']
+      when: coolify_server_install | default(false)
 
     - role: cloudflare-tunnel
       become: yes
       tags: ['cloudflare', 'tunnel']
+      when: cloudflare_tunnel_install | default(false)
 
   post_tasks:
     - name: Display completion message
       debug:
         msg: |
           ============================================
-          🎉 Raspberry Pi Provisioning Complete!
+          🎉 Homelab Provisioning Complete!
           ============================================
           
           Next steps:
           1. Log out and log back in (or run: exec zsh)
-          2. Verify your prompt shows:  marcos@neo:~$
+          2. Verify your prompt shows:  {{ ansible_user }}@{{ inventory_hostname }}:~$
           3. Test tools: which fd rg bat jq yq ast-grep
           4. Check git config: git config --global --list
           

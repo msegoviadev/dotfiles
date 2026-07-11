@@ -32,6 +32,12 @@
       - build-essential
       - python3
       - python3-pip
+      - git
+      - curl
+      - wget
+      - vim
+      - htop
+      - unzip
     state: present
 
 - name: Set timezone to {{ timezone }}

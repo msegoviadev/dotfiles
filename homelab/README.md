@@ -1,6 +1,6 @@
-# Raspberry Pi Infrastructure Automation
+# Homelab Infrastructure Automation
 
-Ansible playbook for fully automated Raspberry Pi provisioning with shell environment, dev tools, Tailscale VPN, and OpenCode AI server.
+Ansible playbook for provisioning homelab servers (Raspberry Pi, Beelink, etc.) with shell environment, dev tools, Tailscale VPN, and optional services like OpenCode AI server and Coolify.
 
 ## What Gets Automated
 
@@ -9,18 +9,23 @@ Ansible playbook for fully automated Raspberry Pi provisioning with shell enviro
 - **CLI Tools**: fd, ripgrep, bat, jq, yq, fzf, ast-grep, ncdu, tree
 - **Git**: User config (marcos@msegovia.dev)
 - **Tailscale**: VPN with MagicDNS + HTTPS certificates
-- **OpenCode**: AI server with automatic updates (HTTPS via Tailscale Serve)
+- **OpenCode** (optional, on `neo`): AI server with automatic updates (HTTPS via Tailscale Serve)
+
+## Current Servers
+
+- **neo**: Raspberry Pi — Coolify control plane, OpenCode server, Deutsch app, Cloudflare tunnel
+- **bee**: Beelink MINI-S13 — future Coolify worker/destination server
 
 ## Prerequisites
 
 - **Mac**: Ansible installed (`brew install ansible`)
-- **Raspberry Pi**: SSH access configured (`ssh neo` works passwordless)
-- **Network**: Internet connectivity on both machines
+- **Servers**: SSH access configured (`ssh neo` and `ssh bee` work passwordless)
+- **Network**: Internet connectivity on all machines
 
 ## Usage
 
 ```bash
-cd ~/workspace/dotfiles/raspberry-pi
+cd ~/workspace/dotfiles/homelab
 
 # Full provisioning
 ansible-playbook playbook.yml
@@ -32,6 +37,9 @@ ansible-playbook playbook.yml --tags zsh,tools
 
 # Check for OpenCode updates
 ansible-playbook playbook.yml --tags opencode-update
+
+# Provision a single server
+ansible-playbook playbook.yml --limit bee
 ```
 
 **Runtime**: ~5-10 min first run, ~1-2 min subsequent (idempotent)
@@ -39,12 +47,12 @@ ansible-playbook playbook.yml --tags opencode-update
 ## Services & Configuration
 
 ### Tailscale VPN
-- **Domain**: `neo.lamancha-smoot.ts.net` (MagicDNS)
+- **MagicDNS**: `neo.lamancha-smoot.ts.net`, `bee.lamancha-smoot.ts.net`
 - **HTTPS**: Auto-managed Let's Encrypt certificates
 - **Service**: `tailscale-serve.service` (HTTPS proxy on port 443)
-- **Auth**: Manual (SSH to Pi and run `tailscale up` after first install)
+- **Auth**: Manual (SSH to server and run `sudo tailscale up` after first install)
 
-### OpenCode AI Server
+### OpenCode AI Server (on `neo`)
 - **URL**: `https://neo.lamancha-smoot.ts.net/`
 - **Port**: 4096 (HTTP, proxied via Tailscale Serve)
 - **Service**: `opencode.service`
@@ -52,7 +60,7 @@ ansible-playbook playbook.yml --tags opencode-update
 - **User Data**: `/home/marcos/.local/share/opencode/` (never touched by updates)
 
 ### Shell (Zsh)
-- **Theme**: `half-life` with Tux icon ()
+- **Theme**: `half-life` with Tux icon
 - **Plugins**: git, docker, sudo, fzf, zsh-autosuggestions, zsh-syntax-highlighting, systemd, extract, history-substring-search, command-not-found, aliases
 - **History**: 10k commands, shared sessions, deduplicated
 
@@ -91,7 +99,9 @@ verify                  # Post-deployment verification
 ```bash
 ssh neo
 sudo tailscale up
-# Follow the URL to authenticate
+# or for bee
+ssh bee
+sudo tailscale up --hostname=bee
 ```
 
 ### 2. Access OpenCode
@@ -111,10 +121,32 @@ Edit `group_vars/all.yml` for configuration:
 ansible_user: marcos
 timezone: Europe/Zurich
 git_user_email: marcos@msegovia.dev
-tailscale_hostname: neo
 opencode_port: 4096
 zsh_theme: half-life
 zsh_prompt_icon: ""
+```
+
+Host-specific overrides and secrets go in `host_vars/<hostname>.yml` (e.g., `host_vars/neo.yml`, `host_vars/bee.yml`). These files are gitignored. Use the corresponding `host_vars/<hostname>.yml.example` files as templates.
+
+### Optional services per host
+
+The following flags control which optional roles run on each host:
+
+```yaml
+# host_vars/neo.yml example
+tailscale_hostname: neo
+opencode_server_install: true
+deutsch_app_install: true
+coolify_server_install: true
+cloudflare_tunnel_install: true
+```
+
+For `bee`, only the essentials run by default:
+
+```yaml
+# host_vars/bee.yml example
+tailscale_hostname: bee
+# All optional service flags default to false
 ```
 
 Re-run playbook after changes: `ansible-playbook playbook.yml`
@@ -123,7 +155,7 @@ Re-run playbook after changes: `ansible-playbook playbook.yml`
 
 ```bash
 # Test connectivity
-ansible raspberry_pi -m ping
+ansible servers -m ping
 
 # Verbose output
 ansible-playbook playbook.yml -vvv
@@ -142,19 +174,19 @@ journalctl -u tailscale-serve -f
 # 3. Ensure you're on Tailscale network
 ```
 
-## Multiple Raspberry Pis
+## Multiple Servers
 
 Edit `inventory.ini`:
 ```ini
-[raspberry_pi]
+[servers]
 neo ansible_host=neo.local ansible_user=marcos
-neo2 ansible_host=neo2.local ansible_user=marcos
+bee ansible_host=bee.local ansible_user=marcos
 ```
 
 Run against all: `ansible-playbook playbook.yml`  
-Run specific host: `ansible-playbook playbook.yml --limit neo2`
+Run specific host: `ansible-playbook playbook.yml --limit bee`
 
-Host-specific config: Create `host_vars/neo2.yml` with overrides
+Host-specific config: Create `host_vars/<hostname>.yml` with overrides
 
 ## Maintenance
 
@@ -192,18 +224,24 @@ Services:
 ## Structure
 
 ```
-raspberry-pi/
+homelab/
 ├── ansible.cfg
 ├── inventory.ini
 ├── playbook.yml
 ├── group_vars/all.yml
+├── host_vars/
+│   ├── neo.yml
+│   └── bee.yml
 └── roles/
     ├── system-prep/
+    ├── firewall/
     ├── zsh/
     ├── cli-tools/
     ├── git-config/
     ├── tailscale/
-    └── opencode-server/
+    ├── opencode-server/
+    ├── coolify-server/
+    └── cloudflare-tunnel/
 ```
 
 ## Security
@@ -216,3 +254,5 @@ raspberry-pi/
 ---
 
 **Idempotent** - Safe to run repeatedly without breaking anything
+
+**Not committed or pushed** - pending your approval.

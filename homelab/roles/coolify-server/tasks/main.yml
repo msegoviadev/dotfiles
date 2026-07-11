@@ -190,6 +190,14 @@
   become: yes
   tags: ['coolify', 'server']
 
+- name: Ensure ufw-docker after.rules are installed
+  command: /usr/local/bin/ufw-docker install
+  become: yes
+  register: ufw_docker_install
+  changed_when: "'already installed' not in ufw_docker_install.stdout"
+  when: not ansible_check_mode
+  tags: ['coolify', 'server']
+
 - name: Restart Coolify containers to apply overrides
   shell: |
     docker compose --env-file /data/coolify/source/.env \

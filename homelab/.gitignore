@@ -1,5 +1,6 @@
 # Host-specific secrets
 host_vars/neo.yml
+host_vars/bee.yml
 
 # Local environment files
 .env

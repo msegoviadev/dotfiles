@@ -52,9 +52,9 @@
   register: yq_release
   when: not yq_stat.stat.exists
 
-- name: Download yq binary (ARM64)
+- name: Download yq binary
   get_url:
-    url: "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64"
+    url: "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
     dest: /usr/local/bin/yq
     mode: '0755'
     owner: root
@@ -85,9 +85,9 @@
       register: astgrep_temp
       when: not astgrep_stat.stat.exists
 
-    - name: Download ast-grep archive (ARM64)
+    - name: Download ast-grep archive
       get_url:
-        url: "https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-aarch64-unknown-linux-gnu.zip"
+        url: "https://github.com/ast-grep/ast-grep/releases/latest/download/app-{{ 'x86_64' if ansible_architecture == 'x86_64' else 'aarch64' }}-unknown-linux-gnu.zip"
         dest: "{{ astgrep_temp.path }}/ast-grep.zip"
         mode: '0644'
       when: not astgrep_stat.stat.exists
@@ -393,7 +393,7 @@
 
 - name: Update yq binary
   get_url:
-    url: "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_arm64"
+    url: "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' }}"
     dest: /usr/local/bin/yq
     mode: '0755'
     owner: root
@@ -476,9 +476,9 @@
     - astgrep_current_version_number != astgrep_latest_version
   tags: ['cli', 'cli-update', 'update']
 
-- name: Download ast-grep archive (ARM64)
+- name: Download ast-grep archive
   get_url:
-    url: "https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-aarch64-unknown-linux-gnu.zip"
+    url: "https://github.com/ast-grep/ast-grep/releases/latest/download/ast-grep-{{ 'x86_64' if ansible_architecture == 'x86_64' else 'aarch64' }}-unknown-linux-gnu.zip"
     dest: "{{ astgrep_update_temp.path }}/ast-grep.zip"
     mode: '0644'
   when:
