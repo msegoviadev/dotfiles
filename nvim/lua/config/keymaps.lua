@@ -46,6 +46,8 @@ vim.keymap.set("v", ">", ">gv", { desc = "Indent right in visual mode" })
 -- Faster vertical scrolling (half page)
 vim.keymap.set("n", "J", "<C-d>", { desc = "Half page down" })
 vim.keymap.set("n", "K", "<C-u>", { desc = "Half page up" })
+vim.keymap.set("v", "J", "<C-d>", { desc = "Half page down" })
+vim.keymap.set("v", "K", "<C-u>", { desc = "Half page up" })
 
 -- Comment keymaps (using native Neovim 0.10+ commenting)
 vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Comment Line" })
