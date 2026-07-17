@@ -18,6 +18,59 @@ return {
         return jdtls_data_root
       end
 
+      -- Local-only workaround for an m2e/JDT quirk: quarkus-maven-plugin's
+      -- generate-code-tests goal duplicates generate-code's output into a second
+      -- source folder, which JDT flags as "already defined". Tells m2e to skip
+      -- that goal during IDE builds only; doesn't touch the shared repo's pom.xml.
+      -- Verified 2026-07-17: 446 "already defined" errors -> 0 after <leader>jX.
+      local function write_m2e_lifecycle_mapping_override()
+        local cache_data_path = lsp_utils.get_jdtls_cache_data_path(vim.fn.getcwd())
+        local m2e_dir = cache_data_path .. '/.metadata/.plugins/org.eclipse.m2e.core'
+        vim.fn.mkdir(m2e_dir, 'p')
+        local xml = table.concat({
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<lifecycleMappingMetadata>',
+          '  <pluginExecutions>',
+          '    <pluginExecution>',
+          '      <pluginExecutionFilter>',
+          '        <groupId>io.quarkus.platform</groupId>',
+          '        <artifactId>quarkus-maven-plugin</artifactId>',
+          '        <versionRange>[0,)</versionRange>',
+          '        <goals>',
+          '          <goal>generate-code-tests</goal>',
+          '        </goals>',
+          '      </pluginExecutionFilter>',
+          '      <action>',
+          '        <ignore/>',
+          '      </action>',
+          '    </pluginExecution>',
+          '  </pluginExecutions>',
+          '</lifecycleMappingMetadata>',
+        }, '\n')
+        vim.fn.writefile(vim.split(xml, '\n'), m2e_dir .. '/lifecycle-mapping-metadata.xml')
+      end
+      write_m2e_lifecycle_mapping_override()
+
+      -- nvim-java hardcodes jdtls's JVM args (-Xms1G, no -Xmx/GC tuning) with no
+      -- config knob to override them, so wrap get_jvm_args instead of forking it.
+      -- Tune -Xmx based on available RAM.
+      local ok, jdtls_cmd = pcall(require, 'java-core.ls.servers.jdtls.cmd')
+      if ok and jdtls_cmd.get_jvm_args then
+        local base_get_jvm_args = jdtls_cmd.get_jvm_args
+        jdtls_cmd.get_jvm_args = function(config)
+          local args = base_get_jvm_args(config)
+          args:push('-Xmx6G')
+          args:push('-XX:+UseG1GC')
+          args:push('-XX:+UseStringDeduplication')
+          return args
+        end
+      else
+        vim.notify(
+          'jdtls JVM heap patch skipped: nvim-java internals changed, gd/gr may be slow',
+          vim.log.levels.WARN
+        )
+      end
+
       -- Configure nvim-java with optimized settings
       require('java').setup({
         checks = {
@@ -94,6 +147,13 @@ return {
               },
             },
             import = {
+              -- Shrink the imported workspace to cut memory pressure and
+              -- reference-search space in the multi-module reactor.
+              exclusions = {
+                '**/target/**',
+                '**/.git/**',
+                '**/node_modules/**',
+              },
               maven = {
                 enabled = true,
               },
@@ -106,10 +166,11 @@ return {
               importHint = true,
             },
             maven = {
-              downloadSources = true,
-              updateSnapshots = true,
+              -- Disabled: forced network calls on every import stalled jdtls.
+              -- Fetch sources on demand; snapshots via <leader>jR when needed.
+              downloadSources = false,
+              updateSnapshots = false,
             },
-            -- Improve performance for large projects
             maxConcurrentBuilds = 2,
           },
         },
@@ -162,6 +223,9 @@ return {
         -- Clear workspace and restart in background
         vim.defer_fn(function()
           vim.fn.system('rm -rf ' .. workspace_path .. '/*')
+          -- Workspace wipe deletes the m2e lifecycle mapping override too - recreate it
+          -- before the fresh import runs.
+          write_m2e_lifecycle_mapping_override()
           vim.notify('✅ Workspace cleared. Restarting JDTLS...', vim.log.levels.INFO)
           -- Re-enable JDTLS with fresh workspace
           vim.lsp.enable('jdtls')
@@ -187,13 +251,5 @@ return {
       end, { desc = '[J]ava: Show [?] Status' })
       vim.keymap.set('n', '<leader>jX', clear_workspace_and_restart, { desc = '[J]ava: Clear Workspace and Restart' })
     end,
-  },
-  {
-    'neovim/nvim-lspconfig',
-    opts = {
-      servers = {
-        jdtls = false, -- Handled by nvim-java
-      },
-    },
   },
 }
