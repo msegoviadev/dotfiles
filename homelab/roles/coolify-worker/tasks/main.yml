@@ -1,0 +1,191 @@
+---
+# ============================================
+# Coolify Worker Role
+# ============================================
+# Purpose: Prepare a server as a Coolify-managed worker (deployment target).
+# Runs with: mixed (some tasks need become: yes)
+# Notes:
+#   - Stage 1 (tag: coolify-worker-ssh) authorizes the control plane's root
+#     SSH key. Run BEFORE adding the server in the Coolify dashboard.
+#   - Stage 2 (tag: coolify-worker-proxy) deploys the Traefik override and
+#     the Keycloak admin block. Run AFTER the server is added in Coolify
+#     (Coolify creates /data/coolify/proxy during server setup).
+# ============================================
+
+# ============================================
+# Stage 1: Root SSH access for the Coolify control plane
+# ============================================
+
+- name: Derive Coolify public key on the control plane
+  command: "ssh-keygen -y -f {{ coolify_control_plane_key }}"
+  register: coolify_control_plane_pubkey
+  delegate_to: "{{ coolify_control_plane_host }}"
+  become: yes
+  changed_when: false
+  tags: ['coolify', 'worker', 'coolify-worker-ssh']
+
+- name: Ensure root .ssh directory exists
+  file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  become: yes
+  tags: ['coolify', 'worker', 'coolify-worker-ssh']
+
+- name: Authorize Coolify control plane key for root
+  lineinfile:
+    path: /root/.ssh/authorized_keys
+    line: "{{ coolify_control_plane_pubkey.stdout }}"
+    create: yes
+    owner: root
+    group: root
+    mode: '0600'
+  become: yes
+  tags: ['coolify', 'worker', 'coolify-worker-ssh']
+
+- name: Verify root SSH from the control plane
+  command: >
+    ssh -i {{ coolify_control_plane_key }}
+    -o BatchMode=yes
+    -o StrictHostKeyChecking=accept-new
+    -o ConnectTimeout=5
+    root@{{ coolify_worker_bind_ip | default(ansible_default_ipv4.address) }} true
+  delegate_to: "{{ coolify_control_plane_host }}"
+  become: yes
+  changed_when: false
+  tags: ['coolify', 'worker', 'coolify-worker-ssh']
+
+# ============================================
+# Stage 2: Traefik proxy override + Keycloak admin block
+# ============================================
+
+- name: Ensure Coolify proxy compose directory exists
+  file:
+    path: /data/coolify/proxy
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+  tags: ['coolify', 'worker', 'coolify-worker-proxy']
+
+- name: Deploy Traefik override for LAN HTTP and localhost admin
+  copy:
+    content: |
+      services:
+        traefik:
+          ports: !override
+            - "{{ coolify_worker_bind_ip | default(ansible_default_ipv4.address) }}:{{ coolify_proxy_http_port }}:8080"
+            - "127.0.0.1:{{ coolify_proxy_admin_port | default(8081) }}:8081"
+          healthcheck:
+            test: 'wget -qO- http://localhost:8080/ping || exit 1'
+          command:
+            - --ping=true
+            - --ping.entrypoint=http
+            - --api.dashboard=false
+            - --entrypoints.http.address=:8080
+            - --entrypoints.http.forwardedheaders.insecure=true
+            - --entrypoints.admin.address=:8081
+            - --entrypoints.https.address=:8443
+            - --entrypoints.http.http.encodequerysemicolons=true
+            - --entryPoints.http.http2.maxConcurrentStreams=250
+            - --entrypoints.https.http.encodequerysemicolons=true
+            - --entryPoints.https.http2.maxConcurrentStreams=250
+            - --providers.file.directory=/dynamic
+            - --providers.file.watch=true
+            - --providers.docker=true
+            - --providers.docker.exposedbydefault=false
+            - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-}
+            - --certificatesresolvers.letsencrypt.acme.storage=/traefik/acme.json
+            - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+            - --serverstransport.insecureskipverify=true
+          volumes:
+            - "/data/coolify/proxy/dynamic:/dynamic:ro"
+    dest: /data/coolify/proxy/docker-compose.custom.yml
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  tags: ['coolify', 'worker', 'coolify-worker-proxy']
+
+- name: Ensure Traefik dynamic config directory exists
+  file:
+    path: /data/coolify/proxy/dynamic
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  become: yes
+  tags: ['coolify', 'worker', 'coolify-worker-proxy']
+
+- name: Deploy Keycloak admin block dynamic config
+  copy:
+    content: |
+      http:
+        routers:
+          keycloak-admin-block:
+            rule: "Host(`keycloak.grapity.dev`) && (PathPrefix(`/admin`) || Path(`/`))"
+            entryPoints:
+              - http
+            middlewares:
+              - keycloak-admin-block
+            service: keycloak-admin-block-service
+            priority: 1000
+          keycloak-admin-access:
+            rule: "PathPrefix(`/`)"
+            entryPoints:
+              - admin
+            service: keycloak-admin-block-service
+        middlewares:
+          keycloak-admin-block:
+            replacePathRegex:
+              regex: "^.*$"
+              replacement: "/__grapity_blocked__"
+        services:
+          keycloak-admin-block-service:
+            loadBalancer:
+              servers:
+                - url: "http://keycloak:8080"
+    dest: /data/coolify/proxy/dynamic/keycloak-admin-block.yml
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+  tags: ['coolify', 'worker', 'coolify-worker-proxy']
+
+- name: Restart Coolify proxy to apply override
+  shell: |
+    docker compose -f /data/coolify/proxy/docker-compose.yml -f /data/coolify/proxy/docker-compose.custom.yml up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  become: yes
+  tags: ['coolify', 'worker', 'coolify-worker-proxy']
+
+- name: Wait for Traefik to listen on the LAN address
+  wait_for:
+    host: "{{ coolify_worker_bind_ip | default(ansible_default_ipv4.address) }}"
+    port: "{{ coolify_proxy_http_port }}"
+    timeout: 60
+  tags: ['coolify', 'worker', 'coolify-worker-proxy']
+
+- name: Display Coolify worker setup complete message
+  debug:
+    msg: |
+      ============================================
+      Coolify Worker Setup Complete!
+      ============================================
+
+      Root SSH: authorized for the Coolify control plane key.
+
+      Proxy:
+        http://{{ coolify_worker_bind_ip | default(ansible_default_ipv4.address) }}:{{ coolify_proxy_http_port }} (LAN)
+        admin entrypoint on 127.0.0.1:{{ coolify_proxy_admin_port | default(8081) }} (SSH forward only)
+
+      Next steps:
+        1. Add this server in the Coolify dashboard (root@{{ coolify_worker_bind_ip | default(ansible_default_ipv4.address) }}).
+        2. Validate the server and let Coolify install its components.
+        3. Re-run: ansible-playbook playbook.yml --limit {{ inventory_hostname }} --tags coolify-worker-proxy
+      ============================================
+  tags: ['coolify', 'worker', 'coolify-worker-proxy']

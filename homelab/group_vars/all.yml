@@ -75,6 +75,7 @@ astgrep_version: latest
 opencode_server_install: false
 deutsch_app_install: false
 coolify_server_install: false
+coolify_worker_install: false
 cloudflare_tunnel_install: false
 
 # ============================================
@@ -97,10 +98,17 @@ deutsch_app_dir: "{{ home_dir }}/Documents/marcos/deutsch/app"
 home_lan_subnet: "192.168.1.0/24"
 tailscale_ssh_enabled: true
 
+# Static LAN addresses (pinned via router DHCP reservation)
+neo_lan_ip: "192.168.1.70"
+bee_lan_ip: "192.168.1.182"
+
 # ============================================
 # Tailscale Configuration
 # ============================================
 tailscale_hostname: neo
+# Tailscale Serve (HTTPS proxy on 443) only where apps are published (neo).
+# Keep false on workers so port 443 stays free.
+tailscale_serve_enabled: false
 # tailscale_auth_key: ""  # Add your auth key here (will be prompted if not set)
 
 # Tailscale Serve Configuration
@@ -111,27 +119,37 @@ tailscale_hostname: neo
 # - Service: tailscale-serve.service
 #
 # The Keycloak admin console is not exposed through Tailscale Serve.
-# Access it only via SSH port forwarding to localhost:8081.
+# Access it only via SSH port forwarding to the keycloak worker's
+# localhost:8081 (ssh bee-keycloak, see ~/.ssh/config).
 
 # ============================================
 # Coolify Configuration
 # ============================================
 coolify_proxy_http_port: 8080          # avoids conflict with Tailscale 443
 coolify_proxy_admin_port: 8081         # local-only entrypoint for Keycloak admin access
-coolify_dashboard_bind: "127.0.0.1"    # dashboard only via Tailscale
+coolify_dashboard_bind: "127.0.0.1"    # dashboard loopback bind (Tailscale Serve + SSH forwards); LAN access via neo_lan_ip bind
+
+# ============================================
+# Coolify Worker Configuration
+# ============================================
+# Control plane that manages workers (runs the Coolify dashboard)
+coolify_control_plane_host: neo
+coolify_control_plane_key: "/data/coolify/ssh/keys/ssh_key@k10od9qxpvy8tackx65haw2k"
+# IP the worker's proxy binds to (defaults to the host's primary IPv4)
+# coolify_worker_bind_ip: "192.168.1.182"
 
 # ============================================
 # Cloudflare Tunnel Configuration
 # ============================================
-cloudflare_tunnel_name: "grapity-coolify"
+cloudflare_tunnel_name: "coolify-raspberry"
 # Override in host_vars/neo.yml with the token from the Cloudflare dashboard.
 cloudflare_tunnel_token: ""
 
 cloudflare_tunnel_ingress:
   - hostname: "try.grapity.dev"
-    service: "http://localhost:8080"
+    service: "http://{{ bee_lan_ip }}:8080"
   - hostname: "keycloak.grapity.dev"
-    service: "http://localhost:8080"
+    service: "http://{{ bee_lan_ip }}:8080"
   - hostname: "*.grapity.dev"
-    service: "http://localhost:8080"
+    service: "http://{{ bee_lan_ip }}:8080"
   - service: "http_status:404"

@@ -107,6 +107,8 @@
 
 # ============================================
 # Task 4: Configure Tailscale Serve Systemd Service
+# Only on hosts that publish apps via Tailscale HTTPS (neo).
+# Workers keep port 443 free (Coolify proxy).
 # ============================================
 
 - name: Create Tailscale Serve systemd service
@@ -118,13 +120,16 @@
     mode: '0644'
   become: yes
   register: serve_service
+  when: tailscale_serve_enabled | default(false)
   tags: ['tailscale', 'tailscale-serve']
 
 - name: Reload systemd daemon for Tailscale Serve
   systemd:
     daemon_reload: yes
   become: yes
-  when: serve_service.changed
+  when:
+    - tailscale_serve_enabled | default(false)
+    - serve_service.changed
   tags: ['tailscale', 'tailscale-serve']
 
 - name: Enable Tailscale Serve service
@@ -132,6 +137,7 @@
     name: tailscale-serve
     enabled: yes
   become: yes
+  when: tailscale_serve_enabled | default(false)
   tags: ['tailscale', 'tailscale-serve']
 
 - name: Start Tailscale Serve service (only if authenticated)
@@ -139,14 +145,18 @@
     name: tailscale-serve
     state: started
   become: yes
-  when: tailscale_status is defined and tailscale_status.rc == 0
+  when:
+    - tailscale_serve_enabled | default(false)
+    - tailscale_status is defined and tailscale_status.rc == 0
 
 - name: Restart Tailscale Serve service if config changed
   systemd:
     name: tailscale-serve
     state: restarted
   become: yes
-  when: serve_service.changed
+  when:
+    - tailscale_serve_enabled | default(false)
+    - serve_service.changed
   register: serve_start
   failed_when: false
   tags: ['tailscale', 'tailscale-serve']
@@ -156,6 +166,58 @@
   register: serve_status
   changed_when: false
   failed_when: false
+  when: tailscale_serve_enabled | default(false)
+  tags: ['tailscale', 'tailscale-serve']
+
+# ============================================
+# Task 4b: Remove Tailscale Serve where it should not run
+# ============================================
+
+- name: Check if Tailscale Serve systemd unit exists
+  stat:
+    path: /etc/systemd/system/tailscale-serve.service
+  register: serve_unit
+  when: not (tailscale_serve_enabled | default(false))
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Stop and disable Tailscale Serve service
+  systemd:
+    name: tailscale-serve
+    enabled: no
+    state: stopped
+  become: yes
+  when:
+    - not (tailscale_serve_enabled | default(false))
+    - serve_unit.stat.exists
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Remove Tailscale Serve systemd unit
+  file:
+    path: /etc/systemd/system/tailscale-serve.service
+    state: absent
+  become: yes
+  register: serve_unit_removed
+  when:
+    - not (tailscale_serve_enabled | default(false))
+    - serve_unit.stat.exists
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Reload systemd daemon after unit removal
+  systemd:
+    daemon_reload: yes
+  become: yes
+  when:
+    - not (tailscale_serve_enabled | default(false))
+    - serve_unit_removed.changed | default(false)
+  tags: ['tailscale', 'tailscale-serve']
+
+- name: Reset any active Tailscale Serve config
+  command: tailscale serve reset
+  become: yes
+  register: serve_reset
+  changed_when: false
+  failed_when: false
+  when: not (tailscale_serve_enabled | default(false))
   tags: ['tailscale', 'tailscale-serve']
 
 # ============================================
@@ -173,7 +235,7 @@
       Status: AUTHENTICATED
       {{ final_status.stdout }}
       
-      {% if serve_status.rc == 0 and serve_status.stdout != 'No serve config' %}
+      {% if serve_status.rc is defined and serve_status.rc == 0 and serve_status.stdout != 'No serve config' %}
       Tailscale Serve: CONFIGURED
       {{ serve_status.stdout }}
       
@@ -247,7 +309,9 @@
     name: tailscale-serve
     state: restarted
   become: yes
-  when: tailscale_was_updated | bool
+  when:
+    - tailscale_was_updated | bool
+    - tailscale_serve_enabled | default(false)
   tags: ['tailscale', 'tailscale-update', 'update']
 
 - name: Display Tailscale update result

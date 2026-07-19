@@ -14,7 +14,7 @@ Ansible playbook for provisioning homelab servers (Raspberry Pi, Beelink, etc.) 
 ## Current Servers
 
 - **neo**: Raspberry Pi — Coolify control plane, OpenCode server, Deutsch app, Cloudflare tunnel
-- **bee**: Beelink MINI-S13 — future Coolify worker/destination server
+- **bee**: Beelink MINI-S13 — Coolify worker/destination server
 
 ## Prerequisites
 
@@ -49,7 +49,7 @@ ansible-playbook playbook.yml --limit bee
 ### Tailscale VPN
 - **MagicDNS**: `neo.lamancha-smoot.ts.net`, `bee.lamancha-smoot.ts.net`
 - **HTTPS**: Auto-managed Let's Encrypt certificates
-- **Service**: `tailscale-serve.service` (HTTPS proxy on port 443)
+- **Service**: `tailscale-serve.service` (HTTPS proxy on port 443, only where `tailscale_serve_enabled: true`, i.e. neo)
 - **Auth**: Manual (SSH to server and run `sudo tailscale up` after first install)
 
 ### OpenCode AI Server (on `neo`)
@@ -84,6 +84,8 @@ tools, cli              # CLI tools installation
 git, config             # Git configuration
 tailscale, vpn          # Tailscale VPN + HTTPS
 opencode, server        # OpenCode server (full install)
+coolify-worker-ssh      # Worker: authorize Coolify root SSH key (run before adding server in Coolify)
+coolify-worker-proxy    # Worker: Traefik override + Keycloak admin block (run after adding server in Coolify)
 
 # Update-specific tags (only update tasks, no install/setup)
 opencode-update         # Check/update OpenCode version
@@ -141,12 +143,13 @@ coolify_server_install: true
 cloudflare_tunnel_install: true
 ```
 
-For `bee`, only the essentials run by default:
+For `bee`, only the essentials plus the Coolify worker setup run:
 
 ```yaml
 # host_vars/bee.yml example
 tailscale_hostname: bee
-# All optional service flags default to false
+coolify_worker_install: true
+# All other optional service flags default to false
 ```
 
 Re-run playbook after changes: `ansible-playbook playbook.yml`
@@ -241,6 +244,7 @@ homelab/
     ├── tailscale/
     ├── opencode-server/
     ├── coolify-server/
+    ├── coolify-worker/
     └── cloudflare-tunnel/
 ```
 

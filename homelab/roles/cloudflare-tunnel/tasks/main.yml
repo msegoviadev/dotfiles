@@ -150,7 +150,7 @@
 
 - name: Check cloudflared logs for successful connection
   shell: |
-    journalctl -u cloudflared --no-pager -n 20 | grep -qE "connection registered|Registered tunnel connection|Tunnel server stopped"
+    journalctl -u cloudflared --no-pager --since "-3 min" | grep -qE "connection registered|Registered tunnel connection|Tunnel server stopped"
   args:
     executable: /bin/bash
   register: tunnel_log_check

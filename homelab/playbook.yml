@@ -57,6 +57,11 @@
       tags: ['coolify', 'server']
       when: coolify_server_install | default(false)
 
+    - role: coolify-worker
+      become: no
+      tags: ['coolify', 'worker']
+      when: coolify_worker_install | default(false)
+
     - role: cloudflare-tunnel
       become: yes
       tags: ['cloudflare', 'tunnel']

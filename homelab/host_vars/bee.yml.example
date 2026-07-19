@@ -9,11 +9,13 @@
 
 # Tailscale hostname for this server
 tailscale_hostname: bee
+tailscale_serve_enabled: false
 
 # Optional services (defaults to false in group_vars/all.yml)
 opencode_server_install: false
 deutsch_app_install: false
 coolify_server_install: false
+coolify_worker_install: false
 cloudflare_tunnel_install: false
 
 # Cloudflare tunnel token if this server should run a tunnel.
