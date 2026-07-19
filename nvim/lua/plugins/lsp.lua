@@ -274,6 +274,28 @@ return {
             lsp_picker("textDocument/typeDefinition", "lsp_type_definitions", "Type Definitions", { show_line = false })
           end, vim.tbl_extend("force", opts, { desc = "[G]oto T[y]pe Definition" }))
           vim.keymap.set("n", "gr", function()
+            -- Some servers (yamlls, marksman) can't resolve references, so fall
+            -- back to a project-wide whole-word grep of the word under the cursor
+            local references_supported = false
+            for _, client in ipairs(vim.lsp.get_clients({ bufnr = 0 })) do
+              if client:supports_method("textDocument/references") then
+                references_supported = true
+                break
+              end
+            end
+
+            if not references_supported then
+              -- prefill the prompt with the search word so the grep target stays
+              -- visible, and start in normal mode like the other goto pickers so
+              -- results can be navigated right away
+              require("telescope.builtin").grep_string({
+                word_match = "-w",
+                default_text = vim.fn.expand("<cword>"),
+                initial_mode = "normal",
+              })
+              return
+            end
+
             lsp_picker("textDocument/references", "lsp_references", "References", {
               show_line = false,
               -- exclude JDK internals, Maven/Gradle caches, and JDTLS workspace so
