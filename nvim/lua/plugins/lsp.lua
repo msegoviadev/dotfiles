@@ -16,7 +16,7 @@ return {
     dependencies = { "williamboman/mason.nvim" },
     config = function()
       require("mason-lspconfig").setup({
-        ensure_installed = { "lua_ls", "pyright", "ts_ls", "jsonls", "terraformls", "yamlls", "marksman" },
+        ensure_installed = { "lua_ls", "pyright", "ts_ls", "gopls", "jsonls", "terraformls", "yamlls", "marksman" },
       })
     end,
   },
@@ -135,6 +135,12 @@ return {
         root_markers = { ".git", ".marksman.toml" },
       }
 
+      vim.lsp.config.gopls = {
+        cmd = { "gopls" },
+        filetypes = { "go", "gomod", "gowork", "gotmpl" },
+        root_markers = { "go.work", "go.mod", ".git" },
+      }
+
       -- Enable LSP servers
       vim.lsp.enable('pyright')
       vim.lsp.enable('ts_ls')
@@ -143,6 +149,7 @@ return {
       vim.lsp.enable('terraformls')
       vim.lsp.enable('yamlls')
       vim.lsp.enable('marksman')
+      vim.lsp.enable('gopls')
 
       -- Instant-open picker for gr/gi/gy: opens the window after a short debounce
       -- if the response isn't back yet, instead of only mounting it once the full

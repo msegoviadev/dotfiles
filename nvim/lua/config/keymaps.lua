@@ -67,5 +67,78 @@ vim.keymap.set({ "n", "v" }, "L", "$", { desc = "Move to end of line" })
 vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Comment Line" })
 vim.keymap.set("v", "<leader>/", "gc", { remap = true, desc = "Comment Selected" })
 
+-- Compare the selected lines against the current system clipboard.
+local function diff_selection_with_clipboard()
+  local source_buf = vim.api.nvim_get_current_buf()
+  local visual_line = vim.fn.getpos("v")[2]
+  local cursor_line = vim.api.nvim_win_get_cursor(0)[1]
+  local start_line = math.min(visual_line, cursor_line)
+  local end_line = math.max(visual_line, cursor_line)
+  local selection = vim.api.nvim_buf_get_lines(source_buf, start_line - 1, end_line, false)
+  local clipboard = {}
+  if vim.fn.executable("wl-paste") == 1 then
+    local clipboard_text = vim.fn.system("wl-paste --type text/plain")
+    if vim.v.shell_error == 0 then
+      clipboard = vim.split(clipboard_text, "\n", { plain = true, trimempty = false })
+      if clipboard[#clipboard] == "" then table.remove(clipboard) end
+    end
+  end
+  if vim.v.shell_error ~= 0 or (#clipboard == 0) then
+    clipboard = vim.fn.getreg("+", 1, true)
+  end
+  if #clipboard == 0 or (#clipboard == 1 and clipboard[1] == "") then
+    clipboard = vim.fn.getreg("*", 1, true)
+  end
+
+  if #clipboard == 0 or (#clipboard == 1 and clipboard[1] == "") then
+    vim.notify("The system clipboard is empty", vim.log.levels.WARN)
+    return
+  end
+
+  local source_name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(source_buf), ":t")
+  if source_name == "" then source_name = "buffer" end
+
+  local selection_buf = vim.api.nvim_create_buf(false, true)
+  local clipboard_buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(selection_buf, 0, -1, false, selection)
+  vim.api.nvim_buf_set_lines(clipboard_buf, 0, -1, false, clipboard)
+
+  for buffer, label in pairs({ [selection_buf] = "Selection", [clipboard_buf] = "Clipboard" }) do
+    vim.bo[buffer].buftype = "nofile"
+    vim.bo[buffer].bufhidden = "wipe"
+    vim.bo[buffer].buflisted = false
+    vim.bo[buffer].modifiable = false
+    vim.bo[buffer].readonly = true
+    vim.bo[buffer].filetype = vim.bo[source_buf].filetype
+    vim.api.nvim_buf_set_name(buffer, string.format("[%s] %s %d", label, source_name, buffer))
+  end
+
+  vim.cmd("tabnew")
+  local placeholder_buf = vim.api.nvim_get_current_buf()
+  vim.api.nvim_win_set_buf(0, selection_buf)
+  if vim.api.nvim_buf_is_valid(placeholder_buf) and placeholder_buf ~= selection_buf then
+    vim.api.nvim_buf_delete(placeholder_buf, { force = true })
+  end
+  vim.cmd("vsplit")
+  vim.cmd("wincmd h")
+  local selection_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(selection_win, selection_buf)
+  vim.cmd("wincmd l")
+  local clipboard_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(clipboard_win, clipboard_buf)
+
+  for _, window in ipairs({ selection_win, clipboard_win }) do
+    vim.api.nvim_set_current_win(window)
+    vim.cmd("diffthis")
+  end
+
+  for _, buffer in ipairs({ selection_buf, clipboard_buf }) do
+    vim.keymap.set("n", "q", "<cmd>tabclose<cr>", { buffer = buffer, desc = "Close clipboard diff" })
+    vim.keymap.set("n", "<leader>q", "<cmd>tabclose<cr>", { buffer = buffer, desc = "Close clipboard diff" })
+  end
+end
+
+vim.keymap.set("v", "<leader>dc", diff_selection_with_clipboard, { desc = "[D]iff selection with [C]lipboard" })
+
 -- Open merge conflict resolution tool
 vim.keymap.set("n", "<leader>cm", "<cmd>DiffviewOpen<cr>", { desc = "[C]onflict [M]erge tool" })

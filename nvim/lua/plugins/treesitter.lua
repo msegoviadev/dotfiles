@@ -7,7 +7,7 @@ return {
   },
   build = ':TSUpdate',
   config = function()
-    local parsers = { "vim", "vimdoc", "lua", "java", "javascript", "typescript", "html", "css", "json", "tsx", "markdown", "markdown_inline", "gitignore", "python", "terraform", "hcl", "yaml" }
+    local parsers = { "vim", "vimdoc", "lua", "java", "javascript", "typescript", "html", "css", "json", "tsx", "markdown", "markdown_inline", "gitignore", "python", "go", "gomod", "gosum", "gowork", "terraform", "hcl", "yaml" }
 
     require("nvim-treesitter").setup({
       highlight = { enable = true },

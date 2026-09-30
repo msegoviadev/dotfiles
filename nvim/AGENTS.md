@@ -1,5 +1,19 @@
 # Neovim Configuration Guidelines
 
+## Omarchy Theme Integration
+- The colorscheme is owned by the active Omarchy theme, never hardcode one
+- `lua/plugins/theme.lua` + `lua/config/omarchy_theme.lua` read
+  `~/.local/state/omarchy/current/theme/neovim.lua` and hot-reload the
+  colorscheme (fs_poll watcher) when `omarchy theme set` runs
+- `lua/plugins/all-themes.lua` pre-installs all omarchy theme plugins
+  (lazy-loaded) so theme switches never need a network clone; re-sync it
+  from omarchy if new dedicated-plugin themes appear
+- `plugin/after/transparency.lua` strips backgrounds so nvim matches the
+  themed terminal; re-sourced automatically after each theme switch
+- If a colorscheme fails to apply, the adapter falls back to `habamax`
+  and notifies, it must never leave the editor unstyled
+- Rollback to stock omarchy config: `rm ~/.config/nvim && cp -a ~/.config/nvim.omarchy-backup-20260821 ~/.config/nvim`
+
 ## Build/Lint/Test Commands
 - Check config: Open nvim and run `:checkhealth` to verify plugin setup
 - Update plugins: Run `:Lazy sync` in nvim

@@ -136,13 +136,9 @@ return {
             configuration = {
               runtimes = {
                 {
-                  name = 'JavaSE-1.8',
-                  path = vim.fn.expand('~/.sdkman/candidates/java/8.0.462-amzn'),
+                  name = 'JavaSE-25',
+                  path = vim.fn.expand('~/.sdkman/candidates/java/current'),
                   default = true,
-                },
-                {
-                  name = 'JavaSE-21',
-                  path = vim.fn.expand('~/.sdkman/candidates/java/21.0.9-amzn'),
                 },
               },
             },

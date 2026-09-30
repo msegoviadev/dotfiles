@@ -10,8 +10,9 @@ return {
       options = {
         -- Use web devicons if you have a nerdfont installed
         icons_enabled = true,
-        -- Set the theme to dracula, lualine documentation has other themes available as well
-        theme = "catppuccin-mocha",
+        -- Follow the active colorscheme (owned by the omarchy theme) instead
+        -- of hardcoding one, so the statusline retints on theme switches
+        theme = "auto",
         -- Separate components of lua line with chevrons
         component_separators = { left = "", right = "" },
         -- Separate sections with solid triangles

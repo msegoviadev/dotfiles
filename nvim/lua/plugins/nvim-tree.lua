@@ -17,21 +17,28 @@ return {
 
     local icons = require("config.icons")
 
-    local function set_nvim_tree_highlights()
-      -- Custom highlights for git status colors (catppuccin-mocha palette)
-      vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#f9e2af" })   -- Yellow for modified files
-      vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#a6e3a1" })     -- Green for new files
-      vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = "#f38ba8" }) -- Red for deleted files
-      vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = "#fab387" }) -- Peach for renamed files
-      vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#94e2d5" })  -- Teal for staged files
-      vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#cba6f7" })   -- Mauve for merge conflicts
-      vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#6c7086" }) -- Subtext1 for ignored files
+    -- Resolve a highlight group's foreground so tree colors follow whatever
+    -- colorscheme the omarchy theme selected instead of a fixed palette
+    local function hl_fg(name)
+      local ok, hl = pcall(vim.api.nvim_get_hl, 0, { name = name, link = false })
+      return ok and hl.fg and string.format("#%06x", hl.fg) or nil
+    end
 
-      -- Make folders match file color exactly (using catppuccin text color)
-      vim.api.nvim_set_hl(0, "NvimTreeFolderName", { fg = "#cdd6f4", bg = "NONE" })
-      vim.api.nvim_set_hl(0, "NvimTreeOpenedFolderName", { fg = "#cdd6f4", bg = "NONE" })
-      vim.api.nvim_set_hl(0, "NvimTreeEmptyFolderName", { fg = "#cdd6f4", bg = "NONE" })
-      vim.api.nvim_set_hl(0, "NvimTreeFolderIcon", { fg = "#cdd6f4", bg = "NONE" })
+    local function set_nvim_tree_highlights()
+      -- Git status colors sourced from the theme's diagnostic palette
+      vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = hl_fg("DiagnosticWarn") })    -- modified files
+      vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = hl_fg("DiagnosticOk") })        -- new files
+      vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = hl_fg("DiagnosticError") }) -- deleted files
+      vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = hl_fg("DiagnosticHint") })  -- renamed files
+      vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = hl_fg("DiagnosticInfo") })   -- staged files
+      vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = hl_fg("Special") })           -- merge conflicts
+      vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = hl_fg("Comment") })         -- ignored files
+
+      -- Make folders match the theme's plain text color
+      vim.api.nvim_set_hl(0, "NvimTreeFolderName", { fg = hl_fg("Normal"), bg = "NONE" })
+      vim.api.nvim_set_hl(0, "NvimTreeOpenedFolderName", { fg = hl_fg("Normal"), bg = "NONE" })
+      vim.api.nvim_set_hl(0, "NvimTreeEmptyFolderName", { fg = hl_fg("Normal"), bg = "NONE" })
+      vim.api.nvim_set_hl(0, "NvimTreeFolderIcon", { fg = hl_fg("Normal"), bg = "NONE" })
     end
 
     -- Apply highlights now and re-apply whenever the colorscheme changes,

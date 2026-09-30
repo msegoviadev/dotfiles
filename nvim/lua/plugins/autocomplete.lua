@@ -9,13 +9,26 @@ return {
     keymap = {
       preset = 'enter',
 
-      -- Use Tab/S-Tab for both completion navigation AND snippet navigation
-      ['<Tab>'] = { 'select_next', 'snippet_forward', 'fallback' },
-      ['<S-Tab>'] = { 'select_prev', 'snippet_backward', 'fallback' },
+      -- Tab accepts the highlighted suggestion (VSCode-style); inside a snippet
+      -- it jumps to the next placeholder. <C-n>/<C-p> still move through the list.
+      ['<Tab>'] = {
+        function(cmp)
+          if cmp.snippet_active() then return cmp.accept() end
+          return cmp.select_and_accept()
+        end,
+        'snippet_forward',
+        'fallback',
+      },
+      ['<S-Tab>'] = { 'snippet_backward', 'fallback' },
 
       -- Disable arrow keys for completion (allow normal vim movement)
       ['<Up>'] = { 'fallback' },
       ['<Down>'] = { 'fallback' },
+
+      -- Ctrl-j / Ctrl-k move through the list while it is open, and do their
+      -- normal insert-mode thing (newline, etc.) when it is closed
+      ['<C-j>'] = { 'select_next', 'fallback' },
+      ['<C-k>'] = { 'select_prev', 'fallback' },
     },
 
     appearance = {
