@@ -1,0 +1,5 @@
+GET {{tenant}}/api/v2/clients/{{client_id_target}}
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+[Options]
+cacert: {{cacert}}

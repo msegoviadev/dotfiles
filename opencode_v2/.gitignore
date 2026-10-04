@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+package.json
+
+# Lock files
+bun.lock
+package-lock.json
+
+# Runtime service state (contains a local secret)
+service.json
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

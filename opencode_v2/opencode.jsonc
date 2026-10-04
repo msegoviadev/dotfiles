@@ -1,0 +1,51 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "update": "disable",
+  "snapshots": false,
+  "default_agent": "plan",
+  "instructions": ["AGENTS.md"],
+  "watcher": {
+    "ignore": [
+      "documents/**",
+      ".cache/**",
+      ".local/**",
+      ".mozilla/**"
+    ]
+  },
+  "permissions": [
+    { "action": "read", "resource": "*", "effect": "allow" },
+    { "action": "glob", "resource": "*", "effect": "allow" },
+    { "action": "grep", "resource": "*", "effect": "allow" },
+    { "action": "webfetch", "resource": "*", "effect": "allow" },
+    { "action": "websearch", "resource": "*", "effect": "allow" },
+    { "action": "question", "resource": "*", "effect": "allow" },
+    { "action": "skill", "resource": "*", "effect": "allow" },
+    { "action": "subagent", "resource": "*", "effect": "allow" },
+    { "action": "external_directory", "resource": "*", "effect": "allow" },
+    { "action": "edit", "resource": "*", "effect": "allow" },
+    { "action": "edit", "resource": "/home/marcos/.config/hypr/**", "effect": "ask" },
+    { "action": "edit", "resource": "/home/marcos/.config/omarchy/**", "effect": "ask" },
+    { "action": "edit", "resource": "/home/marcos/.config/ghostty/**", "effect": "ask" },
+    { "action": "edit", "resource": "/usr/share/omarchy/**", "effect": "deny" },
+    { "action": "shell", "resource": "*", "effect": "allow" },
+    { "action": "shell", "resource": "git push *", "effect": "ask" },
+    { "action": "shell", "resource": "git commit *", "effect": "ask" },
+    { "action": "shell", "resource": "su *", "effect": "deny" },
+    { "action": "shell", "resource": "doas *", "effect": "deny" },
+    { "action": "shell", "resource": "sudo *", "effect": "deny" },
+    { "action": "shell", "resource": "rm -rf *", "effect": "deny" },
+    { "action": "shell", "resource": "rm -fr *", "effect": "deny" },
+    { "action": "shell", "resource": "shutdown *", "effect": "deny" },
+    { "action": "shell", "resource": "reboot *", "effect": "deny" },
+    { "action": "shell", "resource": "dd *", "effect": "deny" },
+    { "action": "shell", "resource": "mkfs *", "effect": "deny" },
+    { "action": "shell", "resource": "chmod *", "effect": "deny" },
+    { "action": "shell", "resource": "chown *", "effect": "deny" },
+    { "action": "shell", "resource": "kill *", "effect": "ask" },
+    { "action": "shell", "resource": "pkill *", "effect": "ask" },
+    { "action": "shell", "resource": ": > *", "effect": "deny" }
+  ],
+  "plugins": [
+    "opencode-wakelock"
+  ]
+}
