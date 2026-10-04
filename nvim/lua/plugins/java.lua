@@ -10,6 +10,24 @@ return {
       },
     },
     config = function()
+      -- jdtls asks the client to run commands after a completion, for example
+      -- editor.action.triggerParameterHints. Neovim 0.12 requires a server
+      -- request to get a result or an error, but the upstream handler may return
+      -- nil, which raises "either a result or an error must be sent". Answer
+      -- with vim.NIL so the request is always satisfied.
+      vim.lsp.handlers['workspace/executeClientCommand'] = function(_, params, ctx)
+        local client = vim.lsp.get_client_by_id(ctx.client_id) or {}
+        local fn = (client.commands or {})[params.command] or vim.lsp.commands[params.command]
+        if not fn then
+          return vim.NIL
+        end
+        local ok, result = pcall(fn, params.arguments, ctx)
+        if not ok then
+          return vim.lsp.rpc_response_error(vim.lsp.protocol.ErrorCodes.InternalError, result)
+        end
+        return result == nil and vim.NIL or result
+      end
+
       -- ~/.cache/nvim has com.apple.provenance (macOS Sequoia) which makes it
       -- non-writable for child processes like jdtls. Redirect to stdpath('data').
       local lsp_utils = require('java-core.utils.lsp')
@@ -133,15 +151,13 @@ return {
       vim.lsp.config('jdtls', {
         settings = {
           java = {
-            configuration = {
-              runtimes = {
-                {
-                  name = 'JavaSE-25',
-                  path = vim.fn.expand('~/.sdkman/candidates/java/current'),
-                  default = true,
-                },
-              },
+            -- jdtls defaults signatureHelp to off, so Ctrl-k shows "No signature
+            -- help available" until the client enables it explicitly.
+            signatureHelp = {
+              enabled = true,
             },
+            -- No runtimes block: let jdtls auto-detect the JVM it runs under
+            -- (the sdkman "current" java), so nothing is hardcoded to JavaSE-25.
             import = {
               -- Shrink the imported workspace to cut memory pressure and
               -- reference-search space in the multi-module reactor.
@@ -246,6 +262,151 @@ return {
         vim.notify(get_jdtls_status(), vim.log.levels.INFO)
       end, { desc = '[J]ava: Show [?] Status' })
       vim.keymap.set('n', '<leader>jX', clear_workspace_and_restart, { desc = '[J]ava: Clear Workspace and Restart' })
+
+      -- Derive the Java package from the file's directory under a source root,
+      -- so a new file matches its path without typing the package by hand.
+      local function java_package_for(bufnr)
+        local file = vim.api.nvim_buf_get_name(bufnr)
+        for _, marker in ipairs({ '/src/main/java/', '/src/test/java/' }) do
+          local i = file:find(marker, 1, true)
+          if i then
+            local dir = vim.fn.fnamemodify(file:sub(i + #marker), ':h')
+            local pkg = dir:gsub('/', '.')
+            if pkg ~= '.' and pkg ~= '' then
+              return pkg
+            end
+          end
+        end
+        return nil
+      end
+
+      -- True when the buffer already has a package declaration.
+      local function java_has_package(bufnr)
+        for _, l in ipairs(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)) do
+          if l:match('^%s*package%s') then
+            return true
+          end
+        end
+        return false
+      end
+
+      -- Expose the path-derived package as snippet variables, so `pclass` and
+      -- friends insert the package header only when the file lacks one.
+      local ok_blink, blink_builtin = pcall(require, 'blink.cmp.sources.snippets.default.builtin')
+      if ok_blink then
+        blink_builtin.lazy.JAVA_PACKAGE = function()
+          return java_package_for(vim.api.nvim_get_current_buf()) or ''
+        end
+        blink_builtin.lazy.JAVA_PACKAGE_HEADER = function()
+          local bufnr = vim.api.nvim_get_current_buf()
+          if java_has_package(bufnr) then
+            return ''
+          end
+          local pkg = java_package_for(bufnr)
+          if not pkg then
+            return ''
+          end
+          return 'package ' .. pkg .. ';\n\n'
+        end
+      end
+
+      local function put_package(bufnr)
+        local pkg = java_package_for(bufnr)
+        if not pkg then
+          vim.notify('Not under src/main/java or src/test/java', vim.log.levels.WARN)
+          return
+        end
+        local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+        for i, l in ipairs(lines) do
+          if l:match('^%s*package%s') then
+            lines[i] = 'package ' .. pkg .. ';'
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+            vim.notify('Package set to ' .. pkg, vim.log.levels.INFO)
+            return
+          end
+        end
+        vim.api.nvim_buf_set_lines(bufnr, 0, 0, false, { 'package ' .. pkg .. ';', '' })
+        vim.notify('Package ' .. pkg .. ' added', vim.log.levels.INFO)
+      end
+
+      vim.keymap.set('n', '<leader>jp', function()
+        put_package(vim.api.nvim_get_current_buf())
+      end, { desc = '[J]ava: Set [P]ackage from path' })
+
+      -- Map a class to its test path (and the reverse) under the source roots.
+      local function java_test_counterpart(file)
+        if file:find('/src/main/java/', 1, true) then
+          return file:gsub('/src/main/java/', '/src/test/java/', 1):gsub('%.java$', 'Test.java')
+        end
+        if file:find('/src/test/java/', 1, true) then
+          return file:gsub('/src/test/java/', '/src/main/java/', 1):gsub('Test%.java$', '.java')
+        end
+        return nil
+      end
+
+      -- Jump to the counterpart test, creating it from a skeleton when missing.
+      local function goto_test()
+        local bufnr = vim.api.nvim_get_current_buf()
+        local from = vim.api.nvim_buf_get_name(bufnr)
+        local target = java_test_counterpart(from)
+        if not target then
+          vim.notify('Not under src/main/java or src/test/java', vim.log.levels.WARN)
+          return
+        end
+        if target == from then
+          vim.notify('No test counterpart for ' .. vim.fn.fnamemodify(from, ':t'), vim.log.levels.WARN)
+          return
+        end
+
+        local exists = vim.uv.fs_stat(target) ~= nil
+        if not exists then
+          vim.fn.mkdir(vim.fn.fnamemodify(target, ':h'), 'p')
+        end
+        vim.cmd.edit(vim.fn.fnameescape(target))
+        if not exists then
+          local pkg = java_package_for(vim.api.nvim_get_current_buf())
+          local name = vim.fn.fnamemodify(target, ':t:r')
+          vim.api.nvim_buf_set_lines(0, 0, -1, false, {
+            'package ' .. (pkg or '') .. ';',
+            '',
+            'import org.junit.jupiter.api.Test;',
+            '',
+            'class ' .. name .. ' {',
+            '',
+            '\t@Test',
+            '\tvoid todo() {',
+            '\t}',
+            '}',
+          })
+          vim.bo.filetype = 'java'
+        end
+      end
+
+      vim.keymap.set('n', '<leader>jg', goto_test, { desc = '[J]ava: [G]o to or create test' })
+
+      -- jdtls can miss a Java file that was created after the workspace import.
+      -- On the first save, report it as created so completion and diagnostics
+      -- start working without a manual reindex.
+      local new_java_file = {}
+      vim.api.nvim_create_autocmd('BufNewFile', {
+        pattern = '*.java',
+        callback = function(ev)
+          new_java_file[ev.buf] = true
+        end,
+      })
+      vim.api.nvim_create_autocmd('BufWritePost', {
+        pattern = '*.java',
+        callback = function(ev)
+          if not new_java_file[ev.buf] then
+            return
+          end
+          new_java_file[ev.buf] = nil
+          local changes = { { uri = vim.uri_from_fname(vim.api.nvim_buf_get_name(ev.buf)), type = 1 } }
+          for _, client in ipairs(vim.lsp.get_clients({ bufnr = ev.buf, name = 'jdtls' })) do
+            client.notify('workspace/didChangeWatchedFiles', { changes = changes })
+          end
+        end,
+      })
     end,
   },
 }

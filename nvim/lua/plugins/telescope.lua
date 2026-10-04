@@ -598,6 +598,8 @@ return {
             theme = "dropdown",
             previewer = false,
             initial_mode = "normal",
+            sort_mru = true,
+            sort_lastused = true,
             mappings = {
               i = {
                 ["<C-d>"] = actions.delete_buffer,

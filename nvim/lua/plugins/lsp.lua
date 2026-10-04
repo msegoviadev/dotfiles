@@ -326,6 +326,8 @@ return {
           -- Code actions and refactoring
           vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action,
             vim.tbl_extend("force", opts, { desc = "[C]ode [A]ction" }))
+          vim.keymap.set("n", "<C-CR>", vim.lsp.buf.code_action,
+            vim.tbl_extend("force", opts, { desc = "Code Action" }))
           vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename,
             vim.tbl_extend("force", opts, { desc = "[R]e[n]ame Symbol" }))
 

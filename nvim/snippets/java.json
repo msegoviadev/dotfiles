@@ -1,0 +1,55 @@
+{
+  "Java package declaration for the current file": {
+    "prefix": "ppackage",
+    "body": [
+      "package ${JAVA_PACKAGE};",
+      "$0"
+    ],
+    "description": "Package declaration derived from the current file path"
+  },
+  "Java public class named after the file": {
+    "prefix": "pclass",
+    "body": [
+      "${JAVA_PACKAGE_HEADER}public class ${TM_FILENAME_BASE} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Public class named after the file, with a package header when missing"
+  },
+  "Java public record named after the file": {
+    "prefix": "precord",
+    "body": [
+      "${JAVA_PACKAGE_HEADER}public record ${TM_FILENAME_BASE}(${1}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Public record named after the file, with a package header when missing"
+  },
+  "Java public interface named after the file": {
+    "prefix": "pinterface",
+    "body": [
+      "${JAVA_PACKAGE_HEADER}public interface ${TM_FILENAME_BASE} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Public interface named after the file, with a package header when missing"
+  },
+  "Java public enum named after the file": {
+    "prefix": "penum",
+    "body": [
+      "${JAVA_PACKAGE_HEADER}public enum ${TM_FILENAME_BASE} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Public enum named after the file, with a package header when missing"
+  },
+  "Java main method": {
+    "prefix": "pmain",
+    "body": [
+      "public static void main(String[] args) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Main method"
+  }
+}

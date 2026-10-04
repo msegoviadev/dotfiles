@@ -31,6 +31,50 @@ vim.keymap.set("n", "<C-l>", ":wincmd l<cr>", { desc = "Move focus to the right 
 vim.keymap.set("n", "<C-j>", ":wincmd j<cr>", { desc = "Move focus to the lower window" })
 vim.keymap.set("n", "<C-k>", ":wincmd k<cr>", { desc = "Move focus to the upper window" })
 
+-- Swap jumplist navigation so the left key goes back and the right key goes
+-- forward. Needs a terminal that disambiguates <C-i> from <Tab>; Ghostty does
+-- through the kitty keyboard protocol, plain terminals will not.
+vim.keymap.set("n", "<C-i>", "<C-o>", { desc = "Jump to older position" })
+vim.keymap.set("n", "<C-o>", "<C-i>", { desc = "Jump to newer position" })
+
+-- Move between diagnostics and show the message in a float
+vim.keymap.set("n", "<C-e>", function() vim.diagnostic.jump({ count = 1, float = true }) end,
+  { desc = "Next diagnostic" })
+vim.keymap.set("n", "<C-E>", function() vim.diagnostic.jump({ count = -1, float = true }) end,
+  { desc = "Previous diagnostic" })
+
+-- Toggle between the current buffer and the previous one (alternate file).
+-- When you leave a buffer with a visual selection, the selection is restored
+-- the next time you toggle back into it.
+local pending_visual = {}
+local saved_view = {}
+
+local function toggle_alternate_buffer()
+  if vim.fn.bufnr("#") == -1 then
+    return
+  end
+  local mode = vim.api.nvim_get_mode().mode
+  local visual = mode == "v" or mode == "V" or mode == "\22"
+  local from = vim.api.nvim_get_current_buf()
+  saved_view[from] = vim.fn.winsaveview()
+  if visual then
+    pending_visual[from] = true
+  end
+
+  vim.cmd("buffer #")
+
+  local to = vim.api.nvim_get_current_buf()
+  if pending_visual[to] then
+    pending_visual[to] = nil
+    vim.cmd("normal! gv")
+  end
+  if saved_view[to] then
+    vim.fn.winrestview(saved_view[to])
+  end
+end
+
+vim.keymap.set({ "n", "x" }, "<C-p>", toggle_alternate_buffer, { desc = "Toggle to previous buffer" })
+
 vim.keymap.set("n", "<leader>tc", ":tabnew<cr>", { desc = "[T]ab [C]reat New" })
 vim.keymap.set("n", "<leader>tn", ":tabnext<cr>", { desc = "[T]ab [N]ext" })
 vim.keymap.set("n", "<leader>tp", ":tabprevious<cr>", { desc = "[T]ab [P]revious" })

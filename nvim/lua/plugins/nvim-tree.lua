@@ -148,5 +148,19 @@ return {
         enable = false,
       },
     })
+
+    -- New files do not appear in the tree until it reloads, and
+    -- auto_reload_on_write has no effect while filesystem watchers are enabled.
+    -- On write, refresh the tree and reveal the file without stealing focus.
+    vim.api.nvim_create_autocmd("BufWritePost", {
+      callback = function(ev)
+        local ok, api = pcall(require, "nvim-tree.api")
+        if not ok or not api.tree.is_visible() then
+          return
+        end
+        api.tree.reload()
+        api.tree.find_file({ buf = ev.buf, open = false, update_root = false, focus = false })
+      end,
+    })
   end,
 }
