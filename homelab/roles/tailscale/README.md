@@ -1,18 +1,17 @@
 # Tailscale Role
 
-Installs and configures Tailscale VPN with HTTPS support for OpenCode.
+Installs and configures Tailscale VPN.
 
 ## What This Does
 
-- Installs Tailscale on Raspberry Pi
-- Configures Tailscale Serve to provide HTTPS access
-- Creates systemd service for reliability
+- Installs Tailscale on the host
+- Enables Tailscale SSH (where `tailscale_ssh_enabled` is true)
+- Removes any legacy Tailscale Serve unit and resets the route table
 
 ## Architecture
 
 ```
-Browser → HTTPS (443) → Tailscale Serve → HTTP (4096) → OpenCode
-          [Let's Encrypt cert]
+Client → WireGuard (tailnet) → host
 ```
 
 ## Manual Steps Required
@@ -24,26 +23,14 @@ Browser → HTTPS (443) → Tailscale Serve → HTTP (4096) → OpenCode
    # Visit URL to approve
    ```
 
-2. **Enable MagicDNS & HTTPS**
+2. **Enable MagicDNS**
    - Go to https://login.tailscale.com/admin/dns
    - Enable MagicDNS
-   - Enable HTTPS certificates
-
-3. **Access OpenCode**
-   - https://neo.lamancha-smoot.ts.net/
+   - Enable HTTPS certificates (only needed if a host publishes HTTPS)
 
 ## Services
 
 - `tailscaled.service` - Tailscale daemon
-- `tailscale-serve.service` - HTTPS proxy
-- `opencode.service` - OpenCode server
-
-## Certificate Management
-
-Certificates are managed automatically by Tailscale:
-- Auto-provisioned from Let's Encrypt
-- Auto-renewed every 90 days
-- No manual management needed
 
 ## Verification
 
@@ -51,12 +38,9 @@ Certificates are managed automatically by Tailscale:
 # Check Tailscale connection
 tailscale status
 
-# Check Tailscale Serve
-tailscale serve status
+# Check peers
+tailscale status
 
 # Check systemd service
-sudo systemctl status tailscale-serve
-
-# Test HTTPS
-curl https://neo.lamancha-smoot.ts.net/global/health
+sudo systemctl status tailscaled
 ```

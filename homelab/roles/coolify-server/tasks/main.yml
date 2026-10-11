@@ -5,9 +5,8 @@
 # Purpose: Install and configure Coolify on Raspberry Pi
 # Runs with: mixed (some tasks need become: yes)
 # Notes:
-#   - Coolify dashboard is kept private via Tailscale Serve.
-#   - Traefik proxy is configured to listen on localhost:8080 so it does not
-#     conflict with Tailscale Serve on port 443.
+#   - Coolify dashboard is kept private (loopback plus the LAN bind).
+#   - Traefik proxy listens on localhost:8080, with the admin entrypoint on 8081.
 # ============================================
 
 # ============================================

@@ -7,3 +7,6 @@ host_vars/bee.yml
 
 # Ansible retry files
 *.retry
+
+# Private network dashboard (device inventory: MACs, IPs, names)
+dashboard/

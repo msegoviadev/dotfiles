@@ -52,13 +52,10 @@
   become: yes
   when: not ansible_check_mode
 
-- name: Allow established and related connections
-  ufw:
-    rule: allow
-    direction: in
-    comment: "Allow established and related"
-  become: yes
-  when: not ansible_check_mode
+# Established and related reply traffic is already accepted by UFW's shipped
+# before.rules, so no explicit rule is needed. A previous revision added an
+# unscoped "allow in" rule here, which rendered as "Anywhere ALLOW Anywhere"
+# and effectively defeated the default-deny incoming policy.
 
 - name: Enable UFW
   ufw:

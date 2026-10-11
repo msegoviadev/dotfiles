@@ -1,6 +1,6 @@
 # Homelab Infrastructure Automation
 
-Ansible playbook for provisioning homelab servers (Raspberry Pi, Beelink, etc.) with shell environment, dev tools, Tailscale VPN, and optional services like OpenCode AI server and Coolify.
+Ansible playbook for provisioning homelab servers (Raspberry Pi, Beelink, etc.) with shell environment, dev tools, Tailscale VPN, and optional services like the Coolify control plane and a Cloudflare tunnel.
 
 ## What Gets Automated
 
@@ -8,12 +8,13 @@ Ansible playbook for provisioning homelab servers (Raspberry Pi, Beelink, etc.) 
 - **Shell**: Zsh + Oh My Zsh (`half-life` theme, 12 plugins)
 - **CLI Tools**: fd, ripgrep, bat, jq, yq, fzf, ast-grep, ncdu, tree
 - **Git**: User config (marcos@msegovia.dev)
-- **Tailscale**: VPN with MagicDNS + HTTPS certificates
-- **OpenCode** (optional, on `neo`): AI server with automatic updates (HTTPS via Tailscale Serve)
+- **Tailscale**: VPN with MagicDNS + Tailscale SSH
+- **Coolify** (optional): control plane on `neo`, worker on `bee`
+- **Cloudflare tunnel** (optional, on `neo`): outbound tunnel for public hostnames
 
 ## Current Servers
 
-- **neo**: Raspberry Pi — Coolify control plane, OpenCode server, Deutsch app, Cloudflare tunnel
+- **neo**: Raspberry Pi — Coolify control plane, Cloudflare tunnel
 - **bee**: Beelink MINI-S13 — Coolify worker/destination server
 
 ## Prerequisites
@@ -32,11 +33,8 @@ ansible-playbook playbook.yml
 
 # Specific roles
 ansible-playbook playbook.yml --tags tailscale
-ansible-playbook playbook.yml --tags opencode
+ansible-playbook playbook.yml --tags coolify
 ansible-playbook playbook.yml --tags zsh,tools
-
-# Check for OpenCode updates
-ansible-playbook playbook.yml --tags opencode-update
 
 # Provision a single server
 ansible-playbook playbook.yml --limit bee
@@ -48,16 +46,18 @@ ansible-playbook playbook.yml --limit bee
 
 ### Tailscale VPN
 - **MagicDNS**: `neo.lamancha-smoot.ts.net`, `bee.lamancha-smoot.ts.net`
-- **HTTPS**: Auto-managed Let's Encrypt certificates
-- **Service**: `tailscale-serve.service` (HTTPS proxy on port 443, only where `tailscale_serve_enabled: true`, i.e. neo)
+- **SSH**: Tailscale SSH (`tailscale_ssh_enabled: true`), no port-22 rule needed on the tailnet
 - **Auth**: Manual (SSH to server and run `sudo tailscale up` after first install)
 
-### OpenCode AI Server (on `neo`)
-- **URL**: `https://neo.lamancha-smoot.ts.net/`
-- **Port**: 4096 (HTTP, proxied via Tailscale Serve)
-- **Service**: `opencode.service`
-- **Updates**: Automatic version checking and npm updates
-- **User Data**: `/home/marcos/.local/share/opencode/` (never touched by updates)
+### Coolify
+- **Control plane** (on `neo`): dashboard on `neo_lan_ip:8000`, Traefik proxy on `127.0.0.1:8080` (HTTP) and `127.0.0.1:8081` (admin, SSH-forward only)
+- **Worker** (on `bee`): Traefik on `bee_lan_ip:8080` (LAN), admin on `127.0.0.1:8081`
+- **Onboarding**: run `--tags coolify-worker-ssh` before adding the server in Coolify, then `--tags coolify-worker-proxy` after
+
+### Cloudflare Tunnel (on `neo`)
+- Outbound-only connector; no inbound port is opened
+- Ingress list lives in `group_vars/all.yml` and targets `bee_lan_ip:8080`
+- DNS CNAMEs are created manually in the Cloudflare dashboard
 
 ### Shell (Zsh)
 - **Theme**: `half-life` with Tux icon
@@ -78,19 +78,20 @@ init.defaultBranch = main
 
 ```bash
 system, prep             # System configuration
-update                   # Update everything (system packages, zsh, cli-tools, tailscale, opencode)
+update                   # Update everything (system packages, zsh, cli-tools, tailscale)
 zsh, shell              # Shell environment
 tools, cli              # CLI tools installation
 git, config             # Git configuration
-tailscale, vpn          # Tailscale VPN + HTTPS
-opencode, server        # OpenCode server (full install)
+tailscale, vpn          # Tailscale VPN
+coolify, server         # Coolify control plane
+coolify, worker         # Coolify worker
 coolify-worker-ssh      # Worker: authorize Coolify root SSH key (run before adding server in Coolify)
 coolify-worker-proxy    # Worker: Traefik override + Keycloak admin block (run after adding server in Coolify)
+cloudflare, tunnel      # Cloudflare tunnel
 
 # Update-specific tags (only update tasks, no install/setup)
-opencode-update         # Check/update OpenCode version
 tailscale-update        # Check/update Tailscale version
-cli-update              # Update CLI tools (nvm, node, yq, ast-grep, rtk)
+cli-update              # Update CLI tools (yq, ast-grep, rtk)
 zsh-update              # Update Oh My Zsh + plugins
 verify                  # Post-deployment verification
 ```
@@ -106,13 +107,13 @@ ssh bee
 sudo tailscale up --hostname=bee
 ```
 
-### 2. Access OpenCode
-Open `https://neo.lamancha-smoot.ts.net/` in your browser (must be on Tailscale network)
-
-### 3. Verify Services
+### 2. Verify Services
 ```bash
 ssh neo
-systemctl status opencode tailscale-serve
+systemctl status tailscaled
+
+ssh bee
+systemctl status tailscaled
 ```
 
 ## Customization
@@ -123,7 +124,6 @@ Edit `group_vars/all.yml` for configuration:
 ansible_user: marcos
 timezone: Europe/Zurich
 git_user_email: marcos@msegovia.dev
-opencode_port: 4096
 zsh_theme: half-life
 zsh_prompt_icon: ""
 ```
@@ -137,8 +137,6 @@ The following flags control which optional roles run on each host:
 ```yaml
 # host_vars/neo.yml example
 tailscale_hostname: neo
-opencode_server_install: true
-deutsch_app_install: true
 coolify_server_install: true
 cloudflare_tunnel_install: true
 ```
@@ -165,16 +163,8 @@ ansible-playbook playbook.yml -vvv
 
 # Check services
 ssh neo
-systemctl status opencode tailscale-serve
-
-# View logs
-journalctl -u opencode -f
-journalctl -u tailscale-serve -f
-
-# OpenCode not accessible
-# 1. Verify Tailscale is connected: tailscale status
-# 2. Check OpenCode is running: curl http://localhost:4096
-# 3. Ensure you're on Tailscale network
+systemctl status tailscaled
+journalctl -u cloudflared -f
 ```
 
 ## Multiple Servers
@@ -198,7 +188,6 @@ Host-specific config: Create `host_vars/<hostname>.yml` with overrides
 ansible-playbook playbook.yml --tags update
 
 # Update individual components
-ansible-playbook playbook.yml --tags opencode-update
 ansible-playbook playbook.yml --tags tailscale-update
 ansible-playbook playbook.yml --tags cli-update
 ansible-playbook playbook.yml --tags zsh-update
@@ -207,22 +196,19 @@ ansible-playbook playbook.yml --tags zsh-update
 ansible-playbook playbook.yml
 ```
 
-OpenCode user data is never touched by updates (lives in `~/.local/share/opencode/`)
-
 ## Architecture
 
 ```
-Browser (Mac)
-    ↓ HTTPS (Tailscale VPN)
-Tailscale Serve (port 443, TLS termination)
-    ↓ HTTP (localhost)
-OpenCode Server (port 4096)
+Mac / clients
+    ├── LAN            → neo (Coolify dashboard, 8000), bee (Traefik, 8080)
+    ├── Tailscale VPN  → SSH to neo and bee
+    └── Internet       → Cloudflare edge → cloudflared on neo → Traefik on bee
 ```
 
 Services:
-- `tailscaled.service` - Tailscale daemon
-- `tailscale-serve.service` - HTTPS proxy
-- `opencode.service` - AI server
+- `tailscaled.service` - Tailscale daemon (both hosts)
+- `cloudflared.service` - outbound tunnel (neo)
+- Coolify Compose stack - dashboard, proxy, realtime (neo) and apps (bee)
 
 ## Structure
 
@@ -241,8 +227,8 @@ homelab/
     ├── zsh/
     ├── cli-tools/
     ├── git-config/
+    ├── docker/
     ├── tailscale/
-    ├── opencode-server/
     ├── coolify-server/
     ├── coolify-worker/
     └── cloudflare-tunnel/
@@ -252,11 +238,8 @@ homelab/
 
 ✅ No secrets in repository  
 ✅ Safe for version control  
-✅ Tailscale auth manual (not automated)  
-✅ OpenCode API keys stored separately in `~/.local/share/opencode/`
+✅ Tailscale auth manual (not automated)
 
 ---
 
 **Idempotent** - Safe to run repeatedly without breaking anything
-
-**Not committed or pushed** - pending your approval.

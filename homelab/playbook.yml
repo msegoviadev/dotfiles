@@ -1,5 +1,5 @@
 ---
-- name: Provision Homelab Servers - Shell, Dev Environment & OpenCode Server
+- name: Provision Homelab Servers - Shell, Dev Environment & Services
   hosts: servers
   gather_facts: yes
 
@@ -41,16 +41,6 @@
     - role: tailscale
       become: no
       tags: ['tailscale', 'vpn']
-
-    - role: opencode-server
-      become: no
-      tags: ['opencode', 'server']
-      when: opencode_server_install | default(false)
-
-    - role: deutsch-app
-      become: no
-      tags: ['deutsch-app']
-      when: deutsch_app_install | default(false)
 
     - role: coolify-server
       become: yes

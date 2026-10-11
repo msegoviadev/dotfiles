@@ -72,62 +72,36 @@ astgrep_version: latest
 # Optional Service Install Flags
 # ============================================
 # Override these per-host in host_vars/<hostname>.yml
-opencode_server_install: false
-deutsch_app_install: false
 coolify_server_install: false
 coolify_worker_install: false
 cloudflare_tunnel_install: false
 
 # ============================================
-# OpenCode Server Configuration
-# ============================================
-opencode_hostname: "127.0.0.1"
-opencode_port: 4096
-opencode_enable_mdns: false
-
-# ============================================
-# Deutsch App Configuration
-# ============================================
-deutsch_app_hostname: "127.0.0.1"
-deutsch_app_port: 3000
-deutsch_app_dir: "{{ home_dir }}/Documents/marcos/deutsch/app"
-
-# ============================================
 # Network Hardening
 # ============================================
-home_lan_subnet: "192.168.1.0/24"
+home_lan_subnet: "192.168.68.0/22"
 tailscale_ssh_enabled: true
 
-# Static LAN addresses (pinned via router DHCP reservation)
-neo_lan_ip: "192.168.1.70"
-bee_lan_ip: "192.168.1.182"
+# Static LAN addresses (pinned via TP-Link Deco DHCP reservation)
+neo_lan_ip: "192.168.68.51"
+bee_lan_ip: "192.168.68.54"
 
 # ============================================
 # Tailscale Configuration
 # ============================================
 tailscale_hostname: neo
-# Tailscale Serve (HTTPS proxy on 443) only where apps are published (neo).
-# Keep false on workers so port 443 stays free.
-tailscale_serve_enabled: false
 # tailscale_auth_key: ""  # Add your auth key here (will be prompted if not set)
 
-# Tailscale Serve Configuration
-# - HTTPS proxy runs on port 443
-# - /         proxies to OpenCode on port 4096
-# - /deutsch/ proxies to Deutsch App on port 3000
-# - Certificates managed automatically by Tailscale
-# - Service: tailscale-serve.service
-#
-# The Keycloak admin console is not exposed through Tailscale Serve.
-# Access it only via SSH port forwarding to the keycloak worker's
-# localhost:8081 (ssh bee-keycloak, see ~/.ssh/config).
+# The Keycloak admin console is not published anywhere. Access it only via
+# SSH port forwarding to the keycloak worker's localhost:8081
+# (ssh bee-keycloak, see ~/.ssh/config).
 
 # ============================================
 # Coolify Configuration
 # ============================================
-coolify_proxy_http_port: 8080          # avoids conflict with Tailscale 443
+coolify_proxy_http_port: 8080          # HTTP entrypoint for the Coolify proxy
 coolify_proxy_admin_port: 8081         # local-only entrypoint for Keycloak admin access
-coolify_dashboard_bind: "127.0.0.1"    # dashboard loopback bind (Tailscale Serve + SSH forwards); LAN access via neo_lan_ip bind
+coolify_dashboard_bind: "127.0.0.1"    # dashboard loopback bind (SSH forwards); LAN access via neo_lan_ip bind
 
 # ============================================
 # Coolify Worker Configuration
@@ -136,7 +110,7 @@ coolify_dashboard_bind: "127.0.0.1"    # dashboard loopback bind (Tailscale Serv
 coolify_control_plane_host: neo
 coolify_control_plane_key: "/data/coolify/ssh/keys/ssh_key@k10od9qxpvy8tackx65haw2k"
 # IP the worker's proxy binds to (defaults to the host's primary IPv4)
-# coolify_worker_bind_ip: "192.168.1.182"
+# coolify_worker_bind_ip: "192.168.68.54"
 
 # ============================================
 # Cloudflare Tunnel Configuration

@@ -2,7 +2,7 @@
 # ============================================
 # Tailscale Role
 # ============================================
-# Purpose: Install and configure Tailscale VPN on Raspberry Pi
+# Purpose: Install and configure Tailscale VPN
 # Runs with: become: yes for package installation
 # ============================================
 
@@ -106,79 +106,16 @@
   failed_when: false
 
 # ============================================
-# Task 4: Configure Tailscale Serve Systemd Service
-# Only on hosts that publish apps via Tailscale HTTPS (neo).
-# Workers keep port 443 free (Coolify proxy).
+# Task 4: Remove any legacy Tailscale Serve configuration
 # ============================================
-
-- name: Create Tailscale Serve systemd service
-  template:
-    src: tailscale-serve.service.j2
-    dest: /etc/systemd/system/tailscale-serve.service
-    owner: root
-    group: root
-    mode: '0644'
-  become: yes
-  register: serve_service
-  when: tailscale_serve_enabled | default(false)
-  tags: ['tailscale', 'tailscale-serve']
-
-- name: Reload systemd daemon for Tailscale Serve
-  systemd:
-    daemon_reload: yes
-  become: yes
-  when:
-    - tailscale_serve_enabled | default(false)
-    - serve_service.changed
-  tags: ['tailscale', 'tailscale-serve']
-
-- name: Enable Tailscale Serve service
-  systemd:
-    name: tailscale-serve
-    enabled: yes
-  become: yes
-  when: tailscale_serve_enabled | default(false)
-  tags: ['tailscale', 'tailscale-serve']
-
-- name: Start Tailscale Serve service (only if authenticated)
-  systemd:
-    name: tailscale-serve
-    state: started
-  become: yes
-  when:
-    - tailscale_serve_enabled | default(false)
-    - tailscale_status is defined and tailscale_status.rc == 0
-
-- name: Restart Tailscale Serve service if config changed
-  systemd:
-    name: tailscale-serve
-    state: restarted
-  become: yes
-  when:
-    - tailscale_serve_enabled | default(false)
-    - serve_service.changed
-  register: serve_start
-  failed_when: false
-  tags: ['tailscale', 'tailscale-serve']
-
-- name: Get Tailscale Serve status
-  command: tailscale serve status
-  register: serve_status
-  changed_when: false
-  failed_when: false
-  when: tailscale_serve_enabled | default(false)
-  tags: ['tailscale', 'tailscale-serve']
-
-# ============================================
-# Task 4b: Remove Tailscale Serve where it should not run
-# ============================================
+# Earlier revisions published apps over HTTPS on port 443 via Tailscale
+# Serve. No host publishes apps that way anymore, so tear the unit down and
+# reset the route table so port 443 is left clean.
 
 - name: Check if Tailscale Serve systemd unit exists
   stat:
     path: /etc/systemd/system/tailscale-serve.service
   register: serve_unit
-  when: not (tailscale_serve_enabled | default(false))
-  tags: ['tailscale', 'tailscale-serve']
 
 - name: Stop and disable Tailscale Serve service
   systemd:
@@ -186,10 +123,8 @@
     enabled: no
     state: stopped
   become: yes
-  when:
-    - not (tailscale_serve_enabled | default(false))
-    - serve_unit.stat.exists
-  tags: ['tailscale', 'tailscale-serve']
+  when: serve_unit.stat.exists
+  failed_when: false
 
 - name: Remove Tailscale Serve systemd unit
   file:
@@ -197,28 +132,19 @@
     state: absent
   become: yes
   register: serve_unit_removed
-  when:
-    - not (tailscale_serve_enabled | default(false))
-    - serve_unit.stat.exists
-  tags: ['tailscale', 'tailscale-serve']
+  when: serve_unit.stat.exists
 
 - name: Reload systemd daemon after unit removal
   systemd:
     daemon_reload: yes
   become: yes
-  when:
-    - not (tailscale_serve_enabled | default(false))
-    - serve_unit_removed.changed | default(false)
-  tags: ['tailscale', 'tailscale-serve']
+  when: serve_unit_removed.changed | default(false)
 
 - name: Reset any active Tailscale Serve config
   command: tailscale serve reset
   become: yes
-  register: serve_reset
   changed_when: false
   failed_when: false
-  when: not (tailscale_serve_enabled | default(false))
-  tags: ['tailscale', 'tailscale-serve']
 
 # ============================================
 # Task 5: Display Setup Status
@@ -230,41 +156,22 @@
       ============================================
       Tailscale Setup Complete!
       ============================================
-      
+
       {% if final_status.rc == 0 %}
       Status: AUTHENTICATED
       {{ final_status.stdout }}
-      
-      {% if serve_status.rc is defined and serve_status.rc == 0 and serve_status.stdout != 'No serve config' %}
-      Tailscale Serve: CONFIGURED
-      {{ serve_status.stdout }}
-      
-      HTTPS Access: https://{{ tailscale_hostname }}.lamancha-smoot.ts.net/
-      
-      Service: tailscale-serve.service
-      Status: sudo systemctl status tailscale-serve
-      {% else %}
-      Tailscale Serve: NOT CONFIGURED
-      
-      Service created but not started.
-      Ensure MagicDNS and HTTPS are enabled in Tailscale admin console.
-      Then run: sudo systemctl start tailscale-serve
-      {% endif %}
+
+      SSH access: enabled via Tailscale SSH where tailscale_ssh_enabled is true
       {% else %}
       Status: NOT AUTHENTICATED
-      
+
       To authenticate, SSH into the server and run:
       ssh neo
       sudo tailscale up --hostname={{ tailscale_hostname }}
-      
+
       Then visit the URL to approve the device.
-      
-      After authentication:
-      1. Enable MagicDNS in Tailscale admin console
-      2. Enable HTTPS certificates
-      3. Start Tailscale Serve: sudo systemctl start tailscale-serve
       {% endif %}
-      
+
       ============================================
 
 # ============================================
@@ -304,16 +211,6 @@
     tailscale_was_updated: "{{ (tailscale_version_before.stdout_lines[0] | default('')) != (tailscale_version_after.stdout_lines[0] | default('')) and tailscale_version_before.rc | default(1) == 0 and tailscale_version_after.rc | default(1) == 0 }}"
   tags: ['tailscale', 'tailscale-update', 'update']
 
-- name: Restart Tailscale Serve service after update
-  systemd:
-    name: tailscale-serve
-    state: restarted
-  become: yes
-  when:
-    - tailscale_was_updated | bool
-    - tailscale_serve_enabled | default(false)
-  tags: ['tailscale', 'tailscale-update', 'update']
-
 - name: Display Tailscale update result
   debug:
     msg: |
@@ -321,17 +218,15 @@
       ============================================
       Tailscale Updated Successfully!
       ============================================
-      
+
       Previous version: {{ tailscale_version_before_str | default('unknown') }}
       New version: {{ tailscale_version_after_str | default('unknown') }}
-      
-      Tailscale Serve restarted to apply changes.
       ============================================
       {% else %}
       ============================================
       Tailscale Already Up to Date
       ============================================
-      
+
       Current version: {{ tailscale_version_before_str | default('unknown') }}
       No update available.
       ============================================
