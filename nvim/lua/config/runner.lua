@@ -24,6 +24,9 @@ local file_runners = {
   kotlin = function(file) return { "kotlin", file } end,
 }
 
+-- Java is handled separately because the JDK source launcher has no project
+-- classpath, so any file that imports a dependency fails with javac errors.
+
 local function is_file(path)
   return vim.fn.filereadable(path) == 1
 end
@@ -151,18 +154,89 @@ local function java_class_name(path)
   return name
 end
 
+local function maven_cmd(root)
+  local wrapper = root .. "/mvnw"
+  return vim.fn.executable(wrapper) == 1 and wrapper or "mvn"
+end
+
+local function gradle_cmd(root)
+  local wrapper = root .. "/gradlew"
+  return vim.fn.executable(wrapper) == 1 and wrapper or "gradle"
+end
+
+local function file_matches(path, pattern)
+  local ok, lines = pcall(vim.fn.readfile, path, "", 200)
+  if not ok then
+    return false
+  end
+
+  for _, line in ipairs(lines) do
+    if line:match(pattern) then
+      return true
+    end
+  end
+  return false
+end
+
+local function java_build_root(dir)
+  return find_up(dir, { "pom.xml", "build.gradle", "build.gradle.kts", "gradlew" })
+end
+
+local function java_run_command(file)
+  local dir = vim.fn.fnamemodify(file, ":h")
+  local root = java_build_root(dir)
+
+  if not root then
+    return { "java", file }
+  end
+
+  local name = vim.fn.fnamemodify(file, ":t")
+  local is_spring = file_matches(file, "@SpringBootApplication")
+  local has_main = is_spring or file_matches(file, "static%s+void%s+main%s*%(")
+  local compile_only = "No main method in " .. name .. ", compiling the project instead"
+
+  if is_file(root .. "/pom.xml") then
+    local mvn = maven_cmd(root)
+    if is_spring then
+      return { mvn, "-q", "spring-boot:run" }, root
+    end
+    if not has_main then
+      return { "sh", "-c", mvn .. " -q -DskipTests compile && echo Compiled " .. name }, root, compile_only
+    end
+
+    local run = mvn .. " -q -DskipTests compile dependency:build-classpath -Dmdep.outputFile=target/classpath.txt"
+      .. " && java -cp target/classes:$(cat target/classpath.txt) " .. java_class_name(file)
+    return { "sh", "-c", run }, root
+  end
+
+  local gradle = gradle_cmd(root)
+  if is_spring then
+    return { gradle, "-q", "bootRun" }, root
+  end
+  if not has_main then
+    return { "sh", "-c", gradle .. " -q compileJava && echo Compiled " .. name }, root, compile_only
+  end
+
+  local build_file = is_file(root .. "/build.gradle") and (root .. "/build.gradle") or (root .. "/build.gradle.kts")
+  if file_matches(build_file, "[\"']application[\"']") then
+    return { gradle, "-q", "run" }, root
+  end
+
+  local run = gradle .. " -q classes && java -cp build/classes/java/main " .. java_class_name(file)
+  return { "sh", "-c", run }, root
+end
+
 local function java_test_command(test_file)
   local dir = vim.fn.fnamemodify(test_file, ":h")
   local simple_name = vim.fn.fnamemodify(test_file, ":t:r")
-  local root = find_up(dir, { "pom.xml", "build.gradle", "build.gradle.kts", "gradlew" })
+  local root = java_build_root(dir)
 
   if root then
     if is_file(root .. "/pom.xml") then
-      return { "mvn", "-q", "-Dtest=" .. simple_name, "test" }, root
+      return { maven_cmd(root), "-q", "-Dtest=" .. simple_name, "test" }, root
     end
 
-    local gradlew = is_file(root .. "/gradlew") and (root .. "/gradlew") or "gradle"
-    return { gradlew, "test", "--tests", simple_name }, root
+    return { gradle_cmd(root), "test", "--tests", simple_name }, root
   end
 
   local command = "javac *.java && java " .. java_class_name(test_file)
@@ -227,6 +301,10 @@ function M.command_for_test(test_file, filetype)
 end
 
 function M.command_for(filetype, file)
+  if filetype == "java" then
+    return java_run_command(file)
+  end
+
   local runner = file_runners[filetype]
   if not runner then
     return nil
@@ -257,8 +335,12 @@ function M.close_terminal()
   end
 end
 
-function M.open_terminal(command, dir)
+function M.open_terminal(command, dir, notice)
   M.close_terminal()
+
+  if notice then
+    vim.notify(notice, vim.log.levels.INFO)
+  end
 
   -- Capture the origin before the split, since the new window becomes current.
   run_origin_win = vim.api.nvim_get_current_win()
@@ -289,13 +371,13 @@ function M.run_file()
   vim.cmd("write")
 
   local filetype = vim.bo.filetype
-  local command = M.command_for(filetype, file)
+  local command, dir, notice = M.command_for(filetype, file)
   if not command then
     vim.notify("No runner for filetype '" .. filetype .. "'", vim.log.levels.WARN)
     return
   end
 
-  M.open_terminal(command)
+  M.open_terminal(command, dir, notice)
 end
 
 function M.run_test()
