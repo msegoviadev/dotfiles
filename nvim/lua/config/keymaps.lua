@@ -16,6 +16,21 @@ vim.g.maplocalleader = " "
 -- Remove search highlights after searching
 vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<CR>", { desc = "Remove search highlights" })
 
+-- Redo on U, so undo and redo sit on the same key. The built-in U (undo all
+-- changes on the last edited line) is rarely used.
+vim.keymap.set("n", "U", "<C-r>", { desc = "Redo" })
+
+-- Run the current file in a terminal split. Redo moved to U, so CTRL-R is free
+-- in normal mode; insert-mode and command-line CTRL-R keep their built-in use.
+vim.keymap.set("n", "<C-r>", function()
+  require("config.runner").run_file()
+end, { desc = "Run current file" })
+
+-- Run the test related to the current file, found by naming convention.
+vim.keymap.set("n", "<C-t>", function()
+  require("config.runner").run_test()
+end, { desc = "Run related test" })
+
 -- Exit Vim's terminal mode
 vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
@@ -86,6 +101,11 @@ vim.keymap.set("n", "<leader>wh", ":split<cr>", { desc = "[W]indow Split [H]oriz
 -- Stay in indent mode
 vim.keymap.set("v", "<", "<gv", { desc = "Indent left in visual mode" })
 vim.keymap.set("v", ">", ">gv", { desc = "Indent right in visual mode" })
+
+-- Outdent with Shift+Tab. Neovim's default only jumps back in snippets and
+-- otherwise does nothing, and blink.cmp falls back to this mapping when no
+-- snippet is active.
+vim.keymap.set("i", "<S-Tab>", "<C-d>", { desc = "Outdent one level" })
 
 -- Faster vertical scrolling (quarter page)
 -- Computed from the current window height so the jump adapts to any split size,
