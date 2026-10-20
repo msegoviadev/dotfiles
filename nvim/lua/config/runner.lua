@@ -8,6 +8,7 @@
 local M = {}
 
 local run_win = nil
+local run_origin_win = nil
 
 local file_runners = {
   java = function(file) return { "java", file } end,
@@ -233,10 +234,34 @@ function M.command_for(filetype, file)
   return runner(file)
 end
 
-function M.open_terminal(command, dir)
-  if run_win and vim.api.nvim_win_is_valid(run_win) then
-    vim.api.nvim_win_close(run_win, true)
+-- Close the terminal window and put the cursor back in the window it was
+-- launched from. Neovim can otherwise leave focus in the file tree or another
+-- split, because the bottom split is not always adjacent to the origin window.
+function M.close_terminal()
+  local win = run_win
+  local origin = run_origin_win
+  run_win = nil
+  run_origin_win = nil
+
+  if win and vim.api.nvim_win_is_valid(win) then
+    local buf = vim.api.nvim_win_get_buf(win)
+    if origin and vim.api.nvim_win_is_valid(origin) and origin ~= win then
+      pcall(vim.api.nvim_set_current_win, origin)
+    end
+    pcall(vim.api.nvim_win_close, win, true)
+    if vim.api.nvim_buf_is_valid(buf) then
+      pcall(vim.api.nvim_buf_delete, buf, { force = true })
+    end
+  elseif origin and vim.api.nvim_win_is_valid(origin) then
+    pcall(vim.api.nvim_set_current_win, origin)
   end
+end
+
+function M.open_terminal(command, dir)
+  M.close_terminal()
+
+  -- Capture the origin before the split, since the new window becomes current.
+  run_origin_win = vim.api.nvim_get_current_win()
 
   vim.cmd("botright 12split")
   run_win = vim.api.nvim_get_current_win()
@@ -249,12 +274,9 @@ function M.open_terminal(command, dir)
 
   -- Stay in normal mode so j/k scroll the output, and close the window with
   -- Esc or q instead of leaving terminal mode.
-  local close_terminal = function()
-    vim.cmd("bdelete!")
-  end
   local run_buf = vim.api.nvim_get_current_buf()
-  vim.keymap.set("n", "<Esc>", close_terminal, { buffer = run_buf, desc = "Close terminal" })
-  vim.keymap.set("n", "q", close_terminal, { buffer = run_buf, desc = "Close terminal" })
+  vim.keymap.set("n", "<Esc>", M.close_terminal, { buffer = run_buf, desc = "Close terminal" })
+  vim.keymap.set("n", "q", M.close_terminal, { buffer = run_buf, desc = "Close terminal" })
 end
 
 function M.run_file()
