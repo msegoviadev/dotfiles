@@ -77,6 +77,14 @@ coolify_worker_install: false
 cloudflare_tunnel_install: false
 
 # ============================================
+# Security Updates
+# ============================================
+# Apply Debian security and Docker updates automatically.
+# A kernel update still needs a reboot unless auto reboot is enabled.
+unattended_upgrades_enabled: true
+unattended_upgrades_auto_reboot: false
+
+# ============================================
 # Network Hardening
 # ============================================
 home_lan_subnet: "192.168.68.0/22"
@@ -91,6 +99,10 @@ bee_lan_ip: "192.168.68.54"
 # ============================================
 tailscale_hostname: neo
 # tailscale_auth_key: ""  # Add your auth key here (will be prompted if not set)
+
+# Set to true only when you want to clear the active Tailscale Serve config.
+# bee uses `tailscale serve` to publish the Hermes API on TCP 8642.
+tailscale_serve_reset: false
 
 # The Keycloak admin console is not published anywhere. Access it only via
 # SSH port forwarding to the keycloak worker's localhost:8081

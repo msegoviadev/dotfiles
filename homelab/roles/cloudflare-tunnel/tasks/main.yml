@@ -89,15 +89,33 @@
 # Task 4: Install and start cloudflared service
 # ============================================
 
+- name: Deploy tunnel token
+  copy:
+    content: "{{ cloudflare_tunnel_token }}\n"
+    dest: /etc/cloudflared/token
+    owner: root
+    group: root
+    mode: '0600'
+  become: yes
+  no_log: yes
+  register: cloudflare_token_file
+  tags: ['cloudflare', 'tunnel']
+
+- name: Check for the cloudflared systemd unit
+  stat:
+    path: /etc/systemd/system/cloudflared.service
+  register: cloudflared_unit
+  tags: ['cloudflare', 'tunnel']
+
 - name: Install cloudflared systemd service
   shell: |
-    cloudflared service install {{ cloudflare_tunnel_token }}
+    cloudflared service install "$(cat /etc/cloudflared/token)"
   args:
     executable: /bin/bash
-    creates: /etc/systemd/system/cloudflared.service
   become: yes
   notify: restart cloudflared
   no_log: yes
+  when: cloudflare_token_file is changed or not cloudflared_unit.stat.exists
   tags: ['cloudflare', 'tunnel']
 
 - name: Enable cloudflared service
@@ -150,7 +168,7 @@
 
 - name: Check cloudflared logs for successful connection
   shell: |
-    journalctl -u cloudflared --no-pager --since "-3 min" | grep -qE "connection registered|Registered tunnel connection|Tunnel server stopped"
+    journalctl -u cloudflared --no-pager --since "-3 min" | grep -qE "connection registered|Registered tunnel connection"
   args:
     executable: /bin/bash
   register: tunnel_log_check

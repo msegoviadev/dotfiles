@@ -170,6 +170,8 @@
           ports: !override
             - "127.0.0.1:6001:6001"
             - "127.0.0.1:6002:6002"
+            - "{{ neo_lan_ip }}:6001:6001"
+            - "{{ neo_lan_ip }}:6002:6002"
     dest: /data/coolify/source/docker-compose.custom.yml
     owner: root
     group: root
@@ -190,39 +192,9 @@
   become: yes
   tags: ['coolify', 'server']
 
-- name: Ensure ufw-docker after.rules are installed
-  command: /usr/local/bin/ufw-docker install
-  become: yes
-  register: ufw_docker_install
-  changed_when: "'already installed' not in ufw_docker_install.stdout"
-  when: not ansible_check_mode
-  tags: ['coolify', 'server']
-
-- name: Restart Coolify containers to apply overrides
-  shell: |
-    docker compose --env-file /data/coolify/source/.env \
-      -f /data/coolify/source/docker-compose.yml \
-      -f /data/coolify/source/docker-compose.prod.yml \
-      -f /data/coolify/source/docker-compose.custom.yml \
-      down --remove-orphans && \
-    sleep 5 && \
-    docker compose --env-file /data/coolify/source/.env \
-      -f /data/coolify/source/docker-compose.yml \
-      -f /data/coolify/source/docker-compose.prod.yml \
-      -f /data/coolify/source/docker-compose.custom.yml \
-      up -d --remove-orphans
-  args:
-    executable: /bin/bash
-  become: yes
-  tags: ['coolify', 'server']
-
-- name: Restart Coolify proxy to apply override
-  shell: |
-    docker compose -f /data/coolify/proxy/docker-compose.yml -f /data/coolify/proxy/docker-compose.custom.yml up -d --remove-orphans
-  args:
-    executable: /bin/bash
-  become: yes
-  tags: ['coolify', 'server']
+# The two restarts run from the handlers. They are notified only when a
+# compose override changes, so a normal play does not recreate the stack.
+# The proxy handler also reconnects coolify-proxy to the Keycloak network.
 
 - name: Wait for Coolify dashboard to be reachable after restart
   uri:
@@ -246,14 +218,16 @@
       Coolify Server Setup Complete!
       ============================================
 
-      Dashboard (private, via Tailscale):
-        https://{{ tailscale_hostname }}.lamancha-smoot.ts.net/coolify
+      Dashboard:
+        http://{{ coolify_dashboard_bind }}:8000 (loopback, use an SSH forward)
+        http://{{ neo_lan_ip }}:8000 (LAN)
 
       Internal proxy:
-        http://127.0.0.1:8080
+        http://127.0.0.1:{{ coolify_proxy_http_port }}
+        http://127.0.0.1:{{ coolify_proxy_admin_port | default(8081) }} (Keycloak admin, SSH forward only)
 
       Next steps:
-        1. Open the dashboard via Tailscale and create the root user.
+        1. Open the dashboard and create the root user.
         2. Deploy Keycloak and the panel service through Coolify.
 
       ============================================

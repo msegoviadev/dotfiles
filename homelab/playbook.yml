@@ -26,6 +26,11 @@
       become: yes
       tags: ['firewall', 'network', 'hardening']
 
+    - role: unattended-upgrades
+      become: yes
+      tags: ['security', 'updates']
+      when: unattended_upgrades_enabled | default(true) | bool
+
     - role: zsh
       become: no
       tags: ['zsh', 'shell']
@@ -56,6 +61,10 @@
       become: yes
       tags: ['cloudflare', 'tunnel']
       when: cloudflare_tunnel_install | default(false)
+
+    - role: verify
+      become: yes
+      tags: ['verify']
 
   post_tasks:
     - name: Display completion message

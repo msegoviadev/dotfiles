@@ -73,6 +73,29 @@
     - cups.path
   failed_when: false
 
+- name: Check for cloudflared
+  stat:
+    path: /usr/bin/cloudflared
+  register: system_cloudflared
+  tags: ['cloudflare', 'cloudflare-update', 'update']
+
+- name: Update cloudflared if installed
+  apt:
+    name: cloudflared
+    state: latest
+  register: system_cloudflared_update
+  when: system_cloudflared.stat.exists
+  tags: ['cloudflare', 'cloudflare-update', 'update']
+
+- name: Restart cloudflared after an update
+  systemd:
+    name: cloudflared
+    state: restarted
+  when:
+    - system_cloudflared.stat.exists
+    - system_cloudflared_update.changed | default(false)
+  tags: ['cloudflare', 'cloudflare-update', 'update']
+
 - name: Deploy SSH hardening snippet
   template:
     src: sshd-hardening.conf.j2

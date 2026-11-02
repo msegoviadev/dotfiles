@@ -1,0 +1,73 @@
+---
+# ============================================
+# Verify Role
+# ============================================
+# Purpose: Report the post-patch state without changing anything.
+# Run with: ansible-playbook playbook.yml --tags verify
+# ============================================
+
+- name: Count pending package upgrades
+  shell: apt list --upgradable 2>/dev/null | grep -c upgradable || true
+  register: verify_pending
+  changed_when: false
+  failed_when: false
+
+- name: Check for a required reboot
+  stat:
+    path: /var/run/reboot-required
+  register: verify_reboot
+
+- name: Check core services
+  command: systemctl is-active {{ item }}
+  loop:
+    - docker
+    - tailscaled
+    - unattended-upgrades
+  register: verify_services
+  changed_when: false
+  failed_when: false
+
+- name: Check UFW status
+  command: ufw status
+  register: verify_ufw
+  changed_when: false
+  failed_when: false
+
+- name: Check for cloudflared
+  stat:
+    path: /usr/bin/cloudflared
+  register: verify_cloudflared
+
+- name: Check the Cloudflare tunnel
+  command: systemctl is-active cloudflared
+  register: verify_tunnel
+  changed_when: false
+  failed_when: false
+  when: verify_cloudflared.stat.exists
+
+- name: Check the Coolify health endpoint
+  uri:
+    url: http://127.0.0.1:8000/api/health
+    status_code: 200
+  register: verify_coolify
+  failed_when: false
+  when: coolify_server_install | default(false) | bool
+
+- name: Check the Hermes data volume
+  command: docker exec hermes-agent-kdemakw5hk97ujuq7w0dijk6 test -f /opt/data/job-search/scripts/scan_boards.py
+  register: verify_hermes
+  changed_when: false
+  failed_when: false
+  when: inventory_hostname == 'bee'
+
+- name: Display verification summary
+  debug:
+    msg: |
+      Host: {{ inventory_hostname }}
+      Pending packages: {{ verify_pending.stdout | default('unknown') }}
+      Reboot required: {{ 'yes' if verify_reboot.stat.exists else 'no' }}
+      Services: {% for result in verify_services.results %}{{ result.item }}={{ result.stdout | default('n/a') }} {% endfor %}
+      UFW: {{ verify_ufw.stdout_lines[0] | default('unknown') }}
+      Cloudflared: {{ verify_tunnel.stdout | default('not installed') }}
+      Coolify health: {{ verify_coolify.status | default('not checked') }}
+      Hermes data: {{ 'ok' if verify_hermes.rc | default(1) == 0 else ('missing' if inventory_hostname == 'bee' else 'not applicable') }}
