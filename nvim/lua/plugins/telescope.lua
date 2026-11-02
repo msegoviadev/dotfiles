@@ -9,6 +9,10 @@ return {
       { "<leader>fg", desc = "[F]ind by [G]rep", mode = { "n", "v" } },
       { "<leader>fb", desc = "[F]ind Existing [B]uffers" },
       { "<leader>fd", desc = "[F]ind [D]iff" },
+      { "<C-?>", mode = "n", desc = "Find [K]eymaps" },
+      { "<C-S-/>", mode = "n", desc = "Find [K]eymaps" },
+      { "<C-/>", mode = "n", desc = "Find [K]eymaps" },
+      { "<C-_>", mode = "n", desc = "Find [K]eymaps" },
     },
     dependencies = {
       {
@@ -499,6 +503,32 @@ return {
       vim.keymap.set('v', '<leader>fg', grep_visual_selection, { desc = "[F]ind by [G]rep (selection)" })
       -- set a vim motion to <Space> + f + b to search Open Buffers
       vim.keymap.set('n', '<leader>fb', builtin.buffers, { desc = '[F]ind Existing [B]uffers' })
+      -- Descriptions use mnemonic brackets such as "[C]ode [A]ction", so the
+      -- plain words "code" and "action" do not match in the picker. Remove the
+      -- brackets from the search text only; the list keeps the original
+      -- description.
+      local function keymaps_picker()
+        local make_entry = require('telescope.make_entry')
+        local picker_opts = {}
+        local make_keymap_entry
+        picker_opts.entry_maker = function(entry)
+          -- The generator needs picker_opts.width_lhs, which Telescope sets
+          -- after it receives picker_opts, so build it on the first entry.
+          make_keymap_entry = make_keymap_entry or make_entry.gen_from_keymaps(picker_opts)
+          local item = make_keymap_entry(entry)
+          if item.ordinal then
+            item.ordinal = item.ordinal:gsub('%[(%a)%]', '%1')
+          end
+          return item
+        end
+        builtin.keymaps(picker_opts)
+      end
+
+      -- Ctrl+Shift+/ reaches Neovim as different key codes depending on the
+      -- terminal and the keyboard protocol, so map every form to one picker.
+      for _, lhs in ipairs({ '<C-?>', '<C-S-/>', '<C-/>', '<C-_>' }) do
+        vim.keymap.set('n', lhs, keymaps_picker, { desc = 'Find [K]eymaps' })
+      end
       -- set a vim motion to <Space> + f + d to search for git diff files
       vim.keymap.set('n', '<leader>fd', find_git_diff, { desc = '[F]ind [D]iff' })
     end

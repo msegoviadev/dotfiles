@@ -254,6 +254,24 @@ return {
         require('java').test.run_current_class()
       end, { desc = '[J]ava: [T]est Class' })
 
+      -- jdtls has no generate-main code action, so insert the method at the
+      -- cursor line with the current indentation.
+      vim.keymap.set('n', '<leader>jm', function()
+        local row = vim.api.nvim_win_get_cursor(0)[1]
+        local line = vim.api.nvim_get_current_line()
+        local indent = string.rep(' ', vim.fn.indent(row))
+        local step = string.rep(' ', vim.fn.shiftwidth())
+        local start = row - 1
+        local finish = line:match('^%s*$') and row or row - 1
+        vim.api.nvim_buf_set_lines(0, start, finish, false, {
+          indent .. 'public static void main(String[] args) {',
+          indent .. step,
+          indent .. '}',
+        })
+        vim.api.nvim_win_set_cursor(0, { row + 1, 0 })
+        vim.cmd('startinsert!')
+      end, { desc = '[J]ava: Generate [M]ain method' })
+
       vim.keymap.set('n', '<leader>jr', ':JavaTestViewLastReport<CR>', { desc = '[J]ava: Test [R]eport' })
 
       -- Utility keymaps

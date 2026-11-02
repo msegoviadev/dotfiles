@@ -22,7 +22,9 @@ return {
   },
   {
     "neovim/nvim-lspconfig",
-    event = "VeryLazy",
+    -- Load before the first file so the LspAttach keymaps exist when a Java
+    -- buffer starts jdtls during startup, as the interview launcher does.
+    lazy = false,
     dependencies = { "williamboman/mason-lspconfig.nvim" },
     config = function()
       vim.lsp.config.pyright = {
@@ -271,15 +273,15 @@ return {
 
           -- Navigation
           vim.keymap.set("n", "gd", vim.lsp.buf.definition,
-            vim.tbl_extend("force", opts, { desc = "[G]oto [D]efinition" }))
+            vim.tbl_extend("force", opts, { desc = "[G]oto [D]efinition (LSP class source)" }))
           vim.keymap.set("n", "gD", vim.lsp.buf.declaration,
-            vim.tbl_extend("force", opts, { desc = "[G]oto [D]eclaration" }))
+            vim.tbl_extend("force", opts, { desc = "[G]oto [D]eclaration (LSP)" }))
           vim.keymap.set("n", "gi", function()
             lsp_picker("textDocument/implementation", "lsp_implementations", "Implementations", { show_line = false })
-          end, vim.tbl_extend("force", opts, { desc = "[G]oto [I]mplementation" }))
+          end, vim.tbl_extend("force", opts, { desc = "[G]oto [I]mplementation (LSP)" }))
           vim.keymap.set("n", "gy", function()
             lsp_picker("textDocument/typeDefinition", "lsp_type_definitions", "Type Definitions", { show_line = false })
-          end, vim.tbl_extend("force", opts, { desc = "[G]oto T[y]pe Definition" }))
+          end, vim.tbl_extend("force", opts, { desc = "[G]oto T[y]pe Definition (LSP type of a variable)" }))
           vim.keymap.set("n", "gr", function()
             -- Some servers (yamlls, marksman) can't resolve references, so fall
             -- back to a project-wide whole-word grep of the word under the cursor
@@ -315,21 +317,26 @@ return {
                 "^" .. vim.fn.expand("~") .. "/.cache/",
               },
             })
-          end, vim.tbl_extend("force", opts, { desc = "[G]oto [R]eferences" }))
+          end, vim.tbl_extend("force", opts, { desc = "[G]oto [R]eferences (LSP)" }))
 
           -- Hover and signature help
           vim.keymap.set("n", "<leader>k", vim.lsp.buf.hover,
-            vim.tbl_extend("force", opts, { desc = "[K]nowledge / Hover Documentation" }))
+            vim.tbl_extend("force", opts, { desc = "[K]nowledge / Hover Documentation (Javadoc)" }))
           vim.keymap.set({ "n", "i" }, "<C-k>", vim.lsp.buf.signature_help,
-            vim.tbl_extend("force", opts, { desc = "Signature Help" }))
+            vim.tbl_extend("force", opts, { desc = "Signature Help (parameters, overloads)" }))
 
-          -- Code actions and refactoring
+          -- Code actions and refactoring. In a Java buffer the menu holds the
+          -- generate actions, so name them in the description for search.
+          local code_action_desc = "[C]ode [A]ction"
+          if vim.bo[ev.buf].filetype == "java" then
+            code_action_desc = "[C]ode [A]ction (Java generate)"
+          end
           vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action,
-            vim.tbl_extend("force", opts, { desc = "[C]ode [A]ction" }))
+            vim.tbl_extend("force", opts, { desc = code_action_desc }))
           vim.keymap.set("n", "<C-CR>", vim.lsp.buf.code_action,
-            vim.tbl_extend("force", opts, { desc = "Code Action" }))
+            vim.tbl_extend("force", opts, { desc = code_action_desc }))
           vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename,
-            vim.tbl_extend("force", opts, { desc = "[R]e[n]ame Symbol" }))
+            vim.tbl_extend("force", opts, { desc = "[R]e[n]ame Symbol (LSP)" }))
 
           -- Formatting
           vim.keymap.set("n", "<leader>l", vim.lsp.buf.format,
